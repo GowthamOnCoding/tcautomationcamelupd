@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head}">
+</head>
+<body class="gradient-bg min-h-screen flex flex-col">
+    <!-- Header -->
+    <div th:replace="~{fragments :: header}"></div>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-12 flex-grow">
+        <div class="glass-card p-8 rounded-2xl shadow-xl animate__animated animate__fadeIn">
+            <div class="mb-6">
+                <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-red-600 bg-clip-text text-transparent tracking-tight">Add Parameter Schema</h1>
+            </div>
+
+            <form th:object="${parameterSchema}" th:action="@{/parameters/save}" method="post" class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Schema ID -->
+                    <div class="form-group">
+                        <label for="schemaId" class="block text-sm font-medium text-gray-700 mb-2">Schema ID</label>
+                        <input type="text" id="schemaId" th:field="*{schemaId}" 
+                               class="glass-card w-full px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
+                    </div>
+
+                    <!-- Schema Version -->
+                    <div class="form-group">
+                        <label for="schemaVersion" class="block text-sm font-medium text-gray-700 mb-2">Schema Version</label>
+                        <input type="number" id="schemaVersion" th:field="*{schemaVersion}" 
+                               class="glass-card w-full px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
+                    </div>
+
+                    <!-- Description -->
+                    <div class="form-group md:col-span-2">
+                        <label for="description" class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                        <input type="text" id="description" th:field="*{description}" 
+                               class="glass-card w-full px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
+                    </div>
+
+                    <!-- Schema Definition -->
+                    <div class="form-group md:col-span-2">
+                        <label for="schemaDefinition" class="block text-sm font-medium text-gray-700 mb-2">Schema Definition</label>
+                        <textarea id="schemaDefinition" th:field="*{schemaDefinition}" rows="6"
+                                  class="glass-card w-full px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"></textarea>
+                    </div>
+
+                    <!-- Is Active -->
+                    <div class="form-group flex items-center space-x-2">
+                        <input type="checkbox" id="isActive" th:field="*{isActive}" 
+                               class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" />
+                        <label for="isActive" class="text-sm font-medium text-gray-700">Active</label>
+                    </div>
+
+                    <!-- Created Date -->
+                    <div class="form-group">
+                        <label for="createdDate" class="block text-sm font-medium text-gray-700 mb-2">Created Date</label>
+                        <input type="text" id="createdDate" th:field="*{createdDate}" 
+                               class="glass-card w-full px-4 py-2 rounded-lg bg-gray-50 text-gray-500 text-sm" readonly />
+                    </div>
+
+                    <!-- Modified Date -->
+                    <div class="form-group">
+                        <label for="modifiedDate" class="block text-sm font-medium text-gray-700 mb-2">Modified Date</label>
+                        <input type="text" id="modifiedDate" th:field="*{modifiedDate}" 
+                               class="glass-card w-full px-4 py-2 rounded-lg bg-gray-50 text-gray-500 text-sm" readonly />
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="flex items-center justify-end space-x-4 mt-8">
+                    <a th:href="@{/parameters}" 
+                       class="btn glass-card px-6 py-2 rounded-lg text-gray-600 hover:text-gray-800 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg flex items-center gap-2">
+                        <i class="fas fa-times"></i>
+                        <span class="tracking-tight">Cancel</span>
+                    </a>
+                    <button type="submit" 
+                            class="btn glass-card px-6 py-2 rounded-lg text-blue-600 hover:text-blue-700 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg flex items-center gap-2">
+                        <i class="fas fa-save"></i>
+                        <span class="tracking-tight">Save Schema</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <div th:replace="~{fragments :: footer}"></div>
+
+    <!-- Scripts -->
+    <div th:replace="~{fragments :: scripts}"></div>
+</body>
+</html>

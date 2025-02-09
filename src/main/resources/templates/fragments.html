@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:fragment="head">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>QA Management Suite</title>
+    <meta name="description" content="Test Management System" />
+    <script src="https://unpkg.com/alpinejs" defer></script>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://kit.fontawesome.com/42d5adcbca.js" crossorigin="anonymous"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen-Sans, Ubuntu, Cantarell, sans-serif;
+        }
+
+        body {
+            font-family: var(--font-primary);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .gradient-bg {
+            background: linear-gradient(135deg, #fdfcfb 0%, #e2d1c3 100%);
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-family: var(--font-primary);
+            font-weight: 600;
+            letter-spacing: -0.025em;
+        }
+
+        .btn {
+            font-weight: 500;
+            letter-spacing: -0.01em;
+        }
+
+        table th {
+            font-weight: 600;
+            letter-spacing: 0.025em;
+        }
+
+        table td {
+            font-weight: 400;
+        }
+    </style>
+</head>
+
+<body class="gradient-bg min-h-screen">
+<!-- Header Fragment -->
+<header th:fragment="header" class="bg-white/80 backdrop-blur-sm border-b border-white/20 py-4">
+    <div class="container mx-auto px-4">
+        <nav class="flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-primary-600">QA Management Suite</h1>
+            <div class="space-x-4">
+                <a th:href="@{/tcmasters}" class="text-gray-600 hover:text-primary-600">Manage Testcases</a>
+                <a th:href="@{/tcsteps}" class="text-gray-600 hover:text-primary-600">Manage Teststeps</a>
+                <a th:href="@{/stepconfig/list}" class="text-gray-600 hover:text-primary-600">Manage step config</a>
+                <a th:href="@{/parameters}" class="text-gray-600 hover:text-primary-600">Schema Definition</a>
+                <a th:href="@{/hosts}" class="text-gray-600 hover:text-primary-600">Manage Hosts</a>
+            </div>
+        </nav>
+    </div>
+</header>
+
+<!-- Main Content Fragment -->
+<main th:fragment="main" class="container mx-auto px-4 py-12">
+    <div class="glass-card p-8 rounded-2xl shadow-xl animate__animated animate__fadeIn">
+        <div th:replace="${view}"></div>
+    </div>
+</main>
+
+<!-- Dashboard Cards Fragment -->
+<div th:fragment="dashboard-cards" class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <!-- Test Cases Card -->
+    <div x-data="{ hover: false }"
+         @mouseenter="hover = true"
+         @mouseleave="hover = false"
+         class="glass-card p-6 rounded-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
+        <div class="bg-blue-100 p-4 rounded-full mb-4 mx-auto w-16 h-16 flex items-center justify-center">
+            <i class="fas fa-layer-group text-2xl text-blue-600"></i>
+        </div>
+        <h3 class="font-semibold text-lg mb-2 text-blue-600">Test Cases</h3>
+        <p class="text-sm text-gray-600">
+            Manage and organize your test cases efficiently
+        </p>
+    </div>
+
+    <!-- Test Steps Card -->
+    <div x-data="{ hover: false }"
+         @mouseenter="hover = true"
+         @mouseleave="hover = false"
+         class="glass-card p-6 rounded-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
+        <div class="bg-green-100 p-4 rounded-full mb-4 mx-auto w-16 h-16 flex items-center justify-center">
+            <i class="fas fa-list-check text-2xl text-green-600"></i>
+        </div>
+        <h3 class="font-semibold text-lg mb-2 text-green-600">Test Steps</h3>
+        <p class="text-sm text-gray-600">
+            Configure and manage test step sequences
+        </p>
+    </div>
+
+    <!-- Schema Card -->
+    <div x-data="{ hover: false }"
+         @mouseenter="hover = true"
+         @mouseleave="hover = false"
+         class="glass-card p-6 rounded-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
+        <div class="bg-purple-100 p-4 rounded-full mb-4 mx-auto w-16 h-16 flex items-center justify-center">
+            <i class="fas fa-database text-2xl text-purple-600"></i>
+        </div>
+        <h3 class="font-semibold text-lg mb-2 text-purple-600">Schema</h3>
+        <p class="text-sm text-gray-600">
+            Define and manage test parameters
+        </p>
+    </div>
+
+    <!-- Hosts Card -->
+    <div x-data="{ hover: false }"
+         @mouseenter="hover = true"
+         @mouseleave="hover = false"
+         class="glass-card p-6 rounded-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
+        <div class="bg-orange-100 p-4 rounded-full mb-4 mx-auto w-16 h-16 flex items-center justify-center">
+            <i class="fas fa-server text-2xl text-orange-600"></i>
+        </div>
+        <h3 class="font-semibold text-lg mb-2 text-orange-600">Hosts</h3>
+        <p class="text-sm text-gray-600">
+            Configure and manage test environments
+        </p>
+    </div>
+</div>
+
+<!-- Footer Fragment -->
+<footer th:fragment="footer" class="bg-white/80 backdrop-blur-sm border-t border-white/20 py-6 mt-auto">
+    <div class="container mx-auto px-4">
+        <div class="text-center">
+            <p class="text-sm text-gray-600">
+                &copy; <span x-text="new Date().getFullYear()"></span> QA Management Suite. All rights reserved.
+            </p>
+        </div>
+    </div>
+</footer>
+
+<!-- Scripts Fragment -->
+<div th:fragment="scripts">
+    <!-- Alpine.js will automatically handle the interactive features -->
+</div>
+</body>
+</html>

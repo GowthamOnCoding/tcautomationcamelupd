@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bank of America QA Management Portal</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/skeleton/2.0.4/skeleton.min.css">
+  <style>
+    /* Bank of America Official Color Palette */
+    :root {
+        --primary: #0033A0;          /* BOA Dark Blue */
+        --secondary: #E31837;        /* BOA Red */
+        --accent: #FFFFFF;           /* White */
+        --background: #F4F4F4;       /* Light Gray */
+        --content-bg: #FFFFFF;       /* White */
+        --footer: #0033A0;           /* Dark Blue */
+    }
+
+    body {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+        background-color: var(--background);
+        font-family: Arial, Helvetica, sans-serif;
+    }
+
+    .container {
+        flex: 1;
+    }
+
+    header {
+        background-color: var(--primary);
+        padding: 25px 0;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        border-bottom: 3px solid var(--secondary);
+    }
+
+    .boa-logo {
+        height: 40px;
+        margin-bottom: 20px;
+    }
+
+    .header-tabs {
+        margin-top: 15px;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .header-tabs a {
+        background-color: var(--accent);
+        color: var(--primary);
+        padding: 10px 30px;
+        border-radius: 5px;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        border: 1px solid var(--primary);
+        font-weight: bold;
+    }
+
+    .header-tabs a:hover {
+        background-color: var(--primary);
+        color: var(--accent);
+        border-color: var(--accent);
+    }
+
+    .main-content {
+        background-color: var(--content-bg);
+        padding: 30px;
+        border-radius: 8px;
+        margin: 40px 0;
+        border: 2px solid var(--primary);
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    footer {
+        background-color: var(--footer);
+        padding: 25px 0;
+        color: var(--accent);
+        margin-top: auto;
+        font-size: 0.9em;
+    }
+
+    h3 {
+        color: var(--accent);
+        font-weight: 600;
+        margin-bottom: 20px;
+        font-size: 1.8rem;
+    }
+
+    .accent-text {
+        color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+<!-- Header -->
+<header>
+  <div class="container">
+    <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAAA8CAMAAADG+c2+AAAAY1BMVEUAAAD///8ApkwAnz4AojsAnDsAoT0AmTgAmzoAmjkAmDsAmTkAmjkAnDsAnDsAmTkAmjkAmjkAmjkAmjkAmjkAmjkAmjkAmjkAmjkAmjkAmjkAmjkAmjkAmjkAmjkAmjnxTCqRAAAAHnRSTlMAgECAv9+fgN+fQGCf34BwgJ8Qz9+gcJ+vYDCQr6qGBLoAAAGkSURBVFjD7ZfZcoMgEEAFFBQV933f9/7/txXjBEGNSU/S5kFnjDNchgW1WjV0MhP5I8yR7x9hifwB5sj3j7BE/gBz5PtHWCLfP8IS+f4Rlsj3j7BEvn+EJfL9IyyR7x9hiXz/CEvk+0dYIt8/whL5/hGWyPePsES+f4Ql8v0jLJHvH2GJfP8IS+T7R1gi3z/CEvn+EZbI94+wRL5/hCXy/SMske8fYYl8/whL5PtHWCLfP8IS+f4Rlsj3j7BEvn+EJfL9IyyR7x9hiXz/CEvk+0dYIt8/whL5/hGWyPePsES+f4Ql8v0jLJHvH2GJfP8IS+T7R1gi3z/CEvn+EZbI94+wRL5/hCXy/SMske8fYYl8/whL5PtHWCLfP8IS+f4Rlsj3j7BEvn+EJfL9IyyR7x9hiXz/CEvk+0dYIt8/whL5/hGWyPePsES+f4Ql8v0jLJHvH2GJfP8IS+T7R1gi3z/CEvn+EZbI94+wRL5/hCXy/SMske8fYYl8/whL5PtHWCLfP8IS+f4Rlsj3j7BEvn+EJfL9IyyR7x9hiXz/CEvk+0dYIt8/whL5/hGWyPePsES+f4Ql8v0jLJHvH2GJfP8IS+T7R1gi3z/CEvn+EZbI94+wRL5/hCXy/SMske8fYYl8/whL5PtHWCLfP8IS+f4Rlsj3j7BEvn+EJfL9IyyR7x9hiXz/CEvk+0dYIt8/whL5/hGWyPePsET+L0EBAFmH9fZkAAAAAElFTkSuQmCC"
+         alt="Bank of America Logo"
+         class="boa-logo">
+    <nav class="header-tabs">
+      <a href="#test-suites">Test Suites</a>
+      <a href="#compliance-checks">Compliance Checks</a>
+      <a href="#security-validations">Security Validations</a>
+      <a href="#audit-logs">Audit Logs</a>
+    </nav>
+  </div>
+</header>
+
+<!-- Main Content -->
+<div class="container">
+  <div class="main-content" th:fragment="content">
+    <h2 class="red-text">Financial Services QA Dashboard</h2>
+    <p>Secure testing environment for Bank of America's digital banking solutions.</p>
+  </div>
+</div>
+
+<!-- Footer -->
+<footer>
+  <div class="container">
+    <p>&copy; 2023 Bank of America Corporation. All rights reserved. | Member FDIC</p>
+  </div>
+</footer>
+</body>
+</html>

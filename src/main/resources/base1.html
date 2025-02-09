@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bank of America Themed Landing Page</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/skeleton/2.0.4/skeleton.min.css">
+    <style>
+        /* Bank of America Color Palette */
+        :root {
+            --primary: #336699;          /* Lighter Blue */
+            --secondary: #E31837;        /* Red */
+            --accent: #FFFFFF;           /* White */
+            --background: #F4F4F4;       /* Light Gray */
+            --content-bg: #FFFFFF;       /* White */
+            --footer: #336699;           /* Lighter Blue */
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            background-color: var(--background);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .container {
+            flex: 1;
+        }
+
+        header {
+            background-color: var(--primary);
+            padding: 30px 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .header-tabs {
+            margin-top: 20px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .header-tabs a {
+            background-color: var(--secondary);
+            color: var(--accent);
+            padding: 12px 25px;
+            border-radius: 25px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border: 2px solid var(--accent);
+        }
+
+        .header-tabs a:hover {
+            background-color: var(--accent);
+            color: var(--secondary);
+            transform: translateY(-2px);
+            box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+        }
+
+        .main-content {
+            background-color: var(--content-bg);
+            padding: 30px;
+            border-radius: 15px;
+            margin: 40px 0;
+            border: 1px solid var(--secondary);
+        }
+
+        footer {
+            background-color: var(--footer);
+            padding: 25px 0;
+            color: var(--accent);
+            margin-top: auto;
+        }
+
+        h3 {
+            color: var(--accent);
+            font-weight: 600;
+            margin-bottom: 25px;
+        }
+
+        .red-text {
+            color: var(--secondary);
+        }
+        .accent-text {
+          color: var(--accent);
+        }
+    </style>
+</head>
+<body>
+<!-- Header -->
+<header>
+    <div class="container">
+        <h3 class="accent-text">Test Management System</h3>
+        <nav class="header-tabs">
+            <a href="#manage-testcases">Manage Testcases</a>
+            <a href="#manage-steps">Manage Steps</a>
+            <a href="#manage-schema">Schema Definition</a>
+            <a href="#manage-hosts">Manage Hosts</a>
+        </nav>
+    </div>
+</header>
+
+<!-- Main Content -->
+<div class="container">
+    <div class="main-content">
+        <h4 class="red-text">Welcome to Your Testing Dashboard</h4>
+        <p>Streamline your testing processes with our intuitive management system. Select a tab above to get started.</p>
+    </div>
+</div>
+
+<!-- Footer -->
+<footer>
+    <div class="container">
+        <p>&copy; 2023 QA Management Suite. All rights reserved.</p>
+    </div>
+</footer>
+</body>
+</html>

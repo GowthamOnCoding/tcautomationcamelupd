@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head}">
+</head>
+<body class="gradient-bg min-h-screen flex flex-col">
+<!-- Header -->
+<div th:replace="~{fragments :: header}"></div>
+
+<!-- Main Content -->
+<main class="container mx-auto px-4 py-12 flex-grow">
+    <div class="glass-card p-8 rounded-2xl shadow-xl animate__animated animate__fadeIn">
+        <div class="mb-6">
+            <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-red-600 bg-clip-text text-transparent tracking-tight">Edit Test Case Step</h1>
+        </div>
+
+        <form th:object="${tcSteps}" th:action="@{/tcsteps/save}" method="post" class="space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Step ID -->
+                <div class="form-group">
+                    <label for="stepId" class="block text-sm font-medium text-gray-700 mb-2">Step ID</label>
+                    <input type="text" id="stepId" th:field="*{stepId}" readonly
+                           class="glass-card w-full px-4 py-2 rounded-lg bg-gray-50 text-gray-500 text-sm" />
+                    <small class="text-red-500 text-xs mt-1" th:if="${#fields.hasErrors('stepId')}" th:errors="*{stepId}"></small>
+                </div>
+
+                <!-- Test Case ID -->
+                <div class="form-group">
+                    <label for="tcId" class="block text-sm font-medium text-gray-700 mb-2">Test Case ID</label>
+                    <input type="text" id="tcId" th:field="*{tcId}" required
+                           class="glass-card w-full px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
+                    <small class="text-red-500 text-xs mt-1" th:if="${#fields.hasErrors('tcId')}" th:errors="*{tcId}"></small>
+                </div>
+
+                <!-- Step Name -->
+                <div class="form-group md:col-span-2">
+                    <label for="stepName" class="block text-sm font-medium text-gray-700 mb-2">Step Name</label>
+                    <input type="text" id="stepName" th:field="*{stepName}" required
+                           class="glass-card w-full px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
+                    <small class="text-red-500 text-xs mt-1" th:if="${#fields.hasErrors('stepName')}" th:errors="*{stepName}"></small>
+                </div>
+
+                <!-- Parameters -->
+                <div class="form-group md:col-span-2">
+                    <label for="parameters" class="block text-sm font-medium text-gray-700 mb-2">Parameters</label>
+                    <textarea id="parameters" th:field="*{parameters}" rows="5"
+                              class="glass-card w-full px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"></textarea>
+                    <small class="text-red-500 text-xs mt-1" th:if="${#fields.hasErrors('parameters')}" th:errors="*{parameters}"></small>
+                </div>
+
+                <!-- Sequence Number -->
+                <div class="form-group">
+                    <label for="sequenceNo" class="block text-sm font-medium text-gray-700 mb-2">Sequence Number</label>
+                    <input type="number" id="sequenceNo" th:field="*{sequenceNo}" required
+                           class="glass-card w-full px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
+                    <small class="text-red-500 text-xs mt-1" th:if="${#fields.hasErrors('sequenceNo')}" th:errors="*{sequenceNo}"></small>
+                </div>
+
+                <!-- Status -->
+                <div class="form-group">
+                    <label for="status" class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                    <select id="status" th:field="*{status}" required
+                            class="glass-card w-full px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                        <option value="">Select Status</option>
+                        <option value="ACTIVE">Active</option>
+                        <option value="INACTIVE">Inactive</option>
+                        <option value="PENDING">Pending</option>
+                    </select>
+                    <small class="text-red-500 text-xs mt-1" th:if="${#fields.hasErrors('status')}" th:errors="*{status}"></small>
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="flex items-center justify-end space-x-4 mt-8">
+                <a th:href="@{/tcsteps}"
+                   class="btn glass-card px-6 py-2 rounded-lg text-gray-600 hover:text-gray-800 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg flex items-center gap-2">
+                    <i class="fas fa-times"></i>
+                    <span class="tracking-tight">Cancel</span>
+                </a>
+                <button type="submit"
+                        class="btn glass-card px-6 py-2 rounded-lg text-blue-600 hover:text-blue-700 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg flex items-center gap-2">
+                    <i class="fas fa-save"></i>
+                    <span class="tracking-tight">Save Changes</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</main>
+
+<!-- Footer -->
+<div th:replace="~{fragments :: footer}"></div>
+
+<!-- Scripts -->
+<div th:replace="~{fragments :: scripts}"></div>
+</body>
+</html>

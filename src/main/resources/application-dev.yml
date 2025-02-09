@@ -1,0 +1,35 @@
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/testdb
+    username: root
+    password: root
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      idle-timeout: 300000
+  jpa:
+    hibernate:
+      ddl-auto: validate  # or 'validate', 'create', 'create-drop'
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+
+
+camel:
+  springboot:
+    name: TcautomationApplication
+    main:
+      run: true
+
+logging:
+  level:
+    root: INFO
+    com.boa.TcautomationApplication: DEBUG
+
+ssh:
+  port: 22
+  user: your_user
+  password: your_password
+common:
+  destination: /path/to/destination

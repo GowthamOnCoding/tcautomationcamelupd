@@ -1,0 +1,23 @@
+ :root {
+            --boa-primary: #0033A0;
+            --boa-secondary: #E31837;
+            --boa-accent: #FFFFFF;
+        }
+
+        .top-bar {
+            background-color: var(--boa-primary);
+            border-bottom: 3px solid var(--boa-secondary);
+        }
+
+        .footer-boa {
+            background-color: var(--boa-primary);
+            color: var(--boa-accent);
+            padding: 2rem 1.5rem;
+        }
+
+        .main-content {
+            background-color: white;
+            border-radius: 6px;
+            border: 2px solid var(--boa-primary);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
