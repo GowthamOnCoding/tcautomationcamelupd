@@ -3,96 +3,153 @@
 <head th:replace="~{fragments :: head}">
 </head>
 <body class="gradient-bg min-h-screen flex flex-col">
-    <!-- Header -->
-    <div th:replace="~{fragments :: header}"></div>
+<!-- Header -->
+<div th:replace="~{fragments :: header}"></div>
 
-    <!-- Main Content -->
-    <main class="container mx-auto px-4 py-12 flex-grow">
-        <div class="glass-card p-8 rounded-2xl shadow-xl animate__animated animate__fadeIn">
-            <div class="flex justify-between items-center mb-6">
-                <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-red-600 bg-clip-text text-transparent tracking-tight">Parameter Schema Management</h1>
-                <a th:href="@{/parameters/add}" 
-                   class="btn glass-card px-6 py-2 rounded-lg text-blue-600 hover:text-blue-700 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg flex items-center gap-2">
-                    <i class="fas fa-plus"></i>
-                    <span class="tracking-tight">Add New Schema</span>
-                </a>
-            </div>
-
-            <div class="overflow-x-auto">
-                <table id="paramschema-table" class="min-w-full bg-white/50 backdrop-blur-sm rounded-lg overflow-hidden">
-                    <thead>
-                        <tr class="bg-gray-50/50">
-                            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Schema ID</th>
-                            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Version</th>
-                            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Definition</th>
-                            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Status</th>
-                            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Description</th>
-                            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Created Date</th>
-                            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Modified Date</th>
-                            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-200/50">
-                        <tr th:each="parameter : ${parameters}" class="hover:bg-gray-50/50 transition-colors">
-                            <td class="py-3 px-4 text-sm font-normal" th:text="${parameter.schemaId}"></td>
-                            <td class="py-3 px-4 text-sm font-normal" th:text="${parameter.schemaVersion}"></td>
-                            <td class="py-3 px-4 text-sm font-normal" th:text="${parameter.schemaDefinition}"></td>
-                            <td class="py-3 px-4">
-                                <span th:if="${parameter.isActive}" class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">Active</span>
-                                <span th:unless="${parameter.isActive}" class="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">Inactive</span>
-                            </td>
-                            <td class="py-3 px-4 text-sm font-normal" th:text="${parameter.description}"></td>
-                            <td class="py-3 px-4 text-sm font-normal" th:text="${parameter.createdDate}"></td>
-                            <td class="py-3 px-4 text-sm font-normal" th:text="${parameter.modifiedDate}"></td>
-                            <td class="py-3 px-4">
-                                <div class="flex items-center space-x-3">
-                                    <a th:href="@{/parameters/edit/{schemaId}(schemaId=${parameter.schemaId})}" 
-                                       class="btn glass-card px-3 py-1 rounded-lg text-blue-600 hover:text-blue-800 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg flex items-center gap-2">
-                                        <i class="fas fa-edit"></i>
-                                        <span class="tracking-tight">Edit</span>
-                                    </a>
-                                    <a th:href="@{/parameters/delete/{schemaId}(schemaId=${parameter.schemaId})}" 
-                                       class="btn glass-card px-3 py-1 rounded-lg text-red-600 hover:text-red-800 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg flex items-center gap-2"
-                                       onclick="return confirm('Are you sure you want to delete this schema?');">
-                                        <i class="fas fa-trash"></i>
-                                        <span class="tracking-tight">Delete</span>
-                                    </a>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+<!-- Main Content -->
+<main class="container mx-auto px-4 py-12 flex-grow">
+    <div class="glass-card p-8 rounded-2xl shadow-xl animate__animated animate__fadeIn">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-red-600 bg-clip-text text-transparent tracking-tight">Parameter Schema Management</h1>
+            <a th:href="@{/parameters/add}"
+               class="btn glass-card px-6 py-2 rounded-lg text-blue-600 hover:text-blue-700 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg flex items-center gap-2">
+                <i class="fas fa-plus"></i>
+                <span class="tracking-tight">Add New Schema</span>
+            </a>
         </div>
-    </main>
 
-    <!-- Footer -->
-    <div th:replace="~{fragments :: footer}"></div>
+        <div class="overflow-x-auto">
+            <table id="paramschema-table" class="min-w-full bg-white/50 backdrop-blur-sm rounded-lg overflow-hidden">
+                <thead>
+                <tr class="bg-gray-50/50">
+                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Schema ID</th>
+                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Version</th>
+                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Definition</th>
+                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Status</th>
+                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Description</th>
+                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Created Date</th>
+                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Modified Date</th>
+                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Actions</th>
+                </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200/50">
+                <tr th:each="parameter : ${parameters}" class="hover:bg-gray-50/50 transition-colors">
+                    <td class="py-3 px-4 text-sm font-normal" th:text="${parameter.schemaId}"></td>
+                    <td class="py-3 px-4 text-sm font-normal" th:text="${parameter.schemaVersion}"></td>
+                    <td class="py-3 px-4 text-sm font-normal">
+                        <div class="relative group">
+                                    <pre class="whitespace-pre-wrap font-mono text-xs bg-gray-50/50 p-2 rounded-lg overflow-x-auto max-w-[300px] transition-all duration-300 hover:bg-gray-100/50"
+                                         th:if="${parameter.schemaDefinition != null and not #strings.isEmpty(parameter.schemaDefinition)}"
+                                         th:attr="data-json=${parameter.schemaDefinition}">
+                                        <code class="json-block" th:text="${parameter.schemaDefinition}"></code>
+                                    </pre>
+                            <span th:if="${parameter.schemaDefinition == null or #strings.isEmpty(parameter.schemaDefinition)}" class="text-gray-400">N/A</span>
 
-    <!-- Scripts -->
-    <div th:replace="~{fragments :: scripts}"></div>
+                            <!-- Copy button -->
+                            <button class="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1 hover:bg-gray-200/50 rounded-lg"
+                                    onclick="navigator.clipboard.writeText(this.parentElement.querySelector('code').textContent)">
+                                <i class="fas fa-copy text-gray-400 text-xs hover:text-gray-600"></i>
+                            </button>
+                        </div>
+                    </td>
+                    <td class="py-3 px-4">
+                        <span th:if="${parameter.isActive}" class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">Active</span>
+                        <span th:unless="${parameter.isActive}" class="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">Inactive</span>
+                    </td>
+                    <td class="py-3 px-4 text-sm font-normal" th:text="${parameter.description}"></td>
+                    <td class="py-3 px-4 text-sm font-normal" th:text="${parameter.createdDate}"></td>
+                    <td class="py-3 px-4 text-sm font-normal" th:text="${parameter.modifiedDate}"></td>
+                    <td class="py-3 px-4">
+                        <div class="flex items-center space-x-3">
+                            <a th:href="@{/parameters/edit/{schemaId}(schemaId=${parameter.schemaId})}"
+                               class="btn glass-card px-3 py-1 rounded-lg text-blue-600 hover:text-blue-800 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg flex items-center gap-2">
+                                <i class="fas fa-edit"></i>
+                                <span class="tracking-tight">Edit</span>
+                            </a>
+                            <a th:href="@{/parameters/delete/{schemaId}(schemaId=${parameter.schemaId})}"
+                               class="btn glass-card px-3 py-1 rounded-lg text-red-600 hover:text-red-800 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg flex items-center gap-2"
+                               onclick="return confirm('Are you sure you want to delete this schema?');">
+                                <i class="fas fa-trash"></i>
+                                <span class="tracking-tight">Delete</span>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>
 
-    <!-- Initialize DataTables -->
-    <script>
-        $(document).ready(function() {
-            $('#paramschema-table').DataTable({
-                "pageLength": 25,
-                "columnDefs": [
-                    { "orderable": false, "targets": [7] }
-                ],
-                "dom": '<"flex items-center justify-between mb-4"lf>rt<"flex items-center justify-between mt-4"ip>',
-                "language": {
-                    "search": "",
-                    "searchPlaceholder": "Search schemas..."
-                }
-            });
+<!-- Footer -->
+<div th:replace="~{fragments :: footer}"></div>
 
-            // Add glass-card effect and font styles to DataTables elements
-            $('.dataTables_wrapper .dataTables_filter input').addClass('glass-card px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-normal');
-            $('.dataTables_wrapper .dataTables_length select').addClass('glass-card px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-normal');
-            $('.dataTables_wrapper .dataTables_length label, .dataTables_wrapper .dataTables_filter label').addClass('text-sm font-normal');
-            $('.dataTables_wrapper .dataTables_info, .dataTables_wrapper .dataTables_paginate').addClass('text-sm font-normal');
+<!-- Scripts -->
+<div th:replace="~{fragments :: scripts}"></div>
+
+<!-- Initialize DataTables -->
+<script>
+    $(document).ready(function() {
+        // Check if DataTable is already initialized
+        if ($.fn.DataTable.isDataTable('#paramschema-table')) {
+            // Destroy the existing DataTable
+            $('#paramschema-table').DataTable().destroy();
+        }
+
+        // Initialize DataTable
+        $('#paramschema-table').DataTable({
+            "pageLength": 25,
+            "columnDefs": [
+                { "orderable": false, "targets": [7] } // Corrected index for Actions column
+            ],
+            "dom": '<"flex items-center justify-between mb-4"lf>rt<"flex items-center justify-between mt-4"ip>',
+            "language": {
+                "search": "",
+                "searchPlaceholder": "Search schemas..."
+            }
         });
-    </script>
+
+        // Add glass-card effect and font styles to DataTables elements
+        $('.dataTables_wrapper .dataTables_filter input').addClass('glass-card px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-normal');
+        $('.dataTables_wrapper .dataTables_length select').addClass('glass-card px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-normal');
+        $('.dataTables_wrapper .dataTables_length label, .dataTables_wrapper .dataTables_filter label').addClass('text-sm font-normal');
+        $('.dataTables_wrapper .dataTables_info, .dataTables_wrapper .dataTables_paginate').addClass('text-sm font-normal');
+
+        // Format JSON displays (if applicable)
+        function syntaxHighlight(json) {
+            if (typeof json !== 'string') return json;
+            try {
+                json = JSON.stringify(JSON.parse(json), null, 2);
+            } catch (e) {
+                return json; // Return original if invalid JSON
+            }
+
+            return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+                function (match) {
+                    let cls = 'text-gray-600';
+                    if (/^"/.test(match)) {
+                        if (/:$/.test(match)) {
+                            cls = 'text-purple-600';
+                        } else {
+                            cls = 'text-green-600';
+                        }
+                    } else if (/true|false/.test(match)) {
+                        cls = 'text-blue-600';
+                    } else if (/null/.test(match)) {
+                        cls = 'text-red-600';
+                    }
+                    return '<span class="' + cls + '">' + match + '</span>';
+                });
+        }
+
+        // Apply formatting after table initialization
+        $('#paramschema-table').on('draw.dt', function () {
+            $('.json-block').each(function () {
+                const formatted = syntaxHighlight($(this).text());
+                $(this).html(formatted);
+            });
+        }).DataTable().draw(); // Trigger initial draw
+    });
+</script>
 </body>
 </html>

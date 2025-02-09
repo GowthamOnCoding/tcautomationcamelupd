@@ -35,7 +35,22 @@
                     <td class="py-3 px-4 text-sm font-normal" th:text="${step.stepId}"></td>
                     <td class="py-3 px-4 text-sm font-normal" th:text="${step.tcId}"></td>
                     <td class="py-3 px-4 text-sm font-normal" th:text="${step.stepName}"></td>
-                    <td class="py-3 px-4 text-sm font-normal" th:text="${step.parameters}"></td>
+                    <td class="py-3 px-4 text-sm font-normal">
+                        <div class="relative group">
+                            <pre class="whitespace-pre-wrap font-mono text-xs bg-gray-50/50 p-2 rounded-lg overflow-x-auto max-w-[300px] transition-all duration-300 hover:bg-gray-100/50"
+                                 th:if="${step.parameters != null and not #strings.isEmpty(step.parameters)}"
+                                 th:attr="data-json=${step.parameters}">
+                                <code class="json-block" th:text="${step.parameters}"></code>
+                            </pre>
+                            <span th:if="${step.parameters == null or #strings.isEmpty(step.parameters)}" class="text-gray-400">N/A</span>
+
+                            <!-- Copy button -->
+                            <button class="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1 hover:bg-gray-200/50 rounded-lg"
+                                    onclick="navigator.clipboard.writeText(this.parentElement.querySelector('code').textContent)">
+                                <i class="fas fa-copy text-gray-400 text-xs hover:text-gray-600"></i>
+                            </button>
+                        </div>
+                    </td>
                     <td class="py-3 px-4 text-sm font-normal" th:text="${step.sequenceNo}"></td>
                     <td class="py-3 px-4">
                         <div class="flex items-center space-x-3">
@@ -68,10 +83,17 @@
 <!-- Page-specific Script -->
 <script>
     $(document).ready(function() {
+        // Check if DataTable is already initialized
+        if ($.fn.DataTable.isDataTable('#tcsteps-table')) {
+            // Destroy the existing DataTable
+            $('#tcsteps-table').DataTable().destroy();
+        }
+
+        // Initialize DataTable
         $('#tcsteps-table').DataTable({
             "pageLength": 25,
             "columnDefs": [
-                { "orderable": false, "targets": [6] }
+                { "orderable": false, "targets": [5] } // Corrected index for Actions column
             ],
             "dom": '<"flex items-center justify-between mb-4"lf>rt<"flex items-center justify-between mt-4"ip>',
             "language": {
@@ -85,6 +107,41 @@
         $('.dataTables_wrapper .dataTables_length select').addClass('glass-card px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-normal');
         $('.dataTables_wrapper .dataTables_length label, .dataTables_wrapper .dataTables_filter label').addClass('text-sm font-normal');
         $('.dataTables_wrapper .dataTables_info, .dataTables_wrapper .dataTables_paginate').addClass('text-sm font-normal');
+
+        // Format JSON displays
+        function syntaxHighlight(json) {
+            if (typeof json !== 'string') return json;
+            try {
+                json = JSON.stringify(JSON.parse(json), null, 2);
+            } catch (e) {
+                return json; // Return original if invalid JSON
+            }
+
+            return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+                function (match) {
+                    let cls = 'text-gray-600';
+                    if (/^"/.test(match)) {
+                        if (/:$/.test(match)) {
+                            cls = 'text-purple-600';
+                        } else {
+                            cls = 'text-green-600';
+                        }
+                    } else if (/true|false/.test(match)) {
+                        cls = 'text-blue-600';
+                    } else if (/null/.test(match)) {
+                        cls = 'text-red-600';
+                    }
+                    return '<span class="' + cls + '">' + match + '</span>';
+                });
+        }
+
+        // Apply formatting after table initialization
+        $('#tcsteps-table').on('draw.dt', function () {
+            $('.json-block').each(function () {
+                const formatted = syntaxHighlight($(this).text());
+                $(this).html(formatted);
+            });
+        }).DataTable().draw(); // Trigger initial draw
     });
 </script>
 </body>
