@@ -30,8 +30,8 @@ public class APIContrOoller {
     }
 
     // Endpoint to fetch Test Steps by Test Case ID
-    @GetMapping("/teststeps")
-    public List<TcSteps> getTestSteps(@RequestParam String testcaseId) {
+    @GetMapping("/teststeps/{testcaseId}")
+    public List<TcSteps> getTestSteps(@PathVariable String testcaseId) {
         return testManagementService.getTestStepsByTestCaseId(testcaseId);
     }
     @GetMapping("/stepnames")
