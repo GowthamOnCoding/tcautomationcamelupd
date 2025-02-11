@@ -1,6 +1,10 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments :: head}">
+    <!-- Include Select2 CSS and JS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 </head>
 <body class="gradient-bg min-h-screen flex flex-col">
 <!-- Header -->
@@ -23,19 +27,25 @@
                     <small class="text-red-500 text-xs mt-1" th:if="${#fields.hasErrors('stepId')}" th:errors="*{stepId}"></small>
                 </div>
 
-                <!-- Test Case ID -->
+                <!-- Test Case ID (Searchable Dropdown) -->
                 <div class="form-group">
                     <label for="tcId" class="block text-sm font-medium text-gray-700 mb-2">Test Case ID</label>
-                    <input type="text" id="tcId" th:field="*{tcId}" required
-                           class="glass-card w-full px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
+                    <select id="tcId" th:field="*{tcId}" required
+                            class="glass-card w-full px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm select2">
+                        <option value="">Select Test Case ID</option>
+                        <option th:each="testCase : ${testCases}" th:value="${testCase.tcId}" th:text="${testCase.tcId}"></option>
+                    </select>
                     <small class="text-red-500 text-xs mt-1" th:if="${#fields.hasErrors('tcId')}" th:errors="*{tcId}"></small>
                 </div>
 
-                <!-- Step Name -->
+                <!-- Step Name (Searchable Dropdown) -->
                 <div class="form-group md:col-span-2">
                     <label for="stepName" class="block text-sm font-medium text-gray-700 mb-2">Step Name</label>
-                    <input type="text" id="stepName" th:field="*{stepName}" required
-                           class="glass-card w-full px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
+                    <select id="stepName" th:field="*{stepName}" required
+                            class="glass-card w-full px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm select2">
+                        <option value="">Select Step Name</option>
+                        <option th:each="stepConfig : ${stepConfigs}" th:value="${stepConfig.stepName}" th:text="${stepConfig.stepName}"></option>
+                    </select>
                     <small class="text-red-500 text-xs mt-1" th:if="${#fields.hasErrors('stepName')}" th:errors="*{stepName}"></small>
                 </div>
 
@@ -91,5 +101,15 @@
 
 <!-- Scripts -->
 <div th:replace="~{fragments :: scripts}"></div>
+
+<!-- Initialize Select2 -->
+<script>
+    $(document).ready(function() {
+        $('.select2').select2({
+            placeholder: 'Select an option',
+            allowClear: true
+        });
+    });
+</script>
 </body>
 </html>
