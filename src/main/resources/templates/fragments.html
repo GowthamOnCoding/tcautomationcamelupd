@@ -17,58 +17,88 @@
     <style>
         :root {
             --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen-Sans, Ubuntu, Cantarell, sans-serif;
+            --primary-color: #2563EB; /* Modern blue */
+            --secondary-color: #1E40AF; /* Darker blue */
+            --accent-color: #DB2777; /* Pink for accents */
+            --background-color: #F9FAFB; /* Light gray background */
         }
 
         body {
             font-family: var(--font-primary);
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
+            background-color: var(--background-color);
         }
 
         .glass-card {
-            background: rgba(255, 255, 255, 0.7);
+            background: rgba(255, 255, 255, 0.8);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
 
         .gradient-bg {
-            background: linear-gradient(135deg, #fdfcfb 0%, #e2d1c3 100%);
+            background: linear-gradient(135deg, #F3F4F6 0%, #E5E7EB 100%);
         }
 
         h1, h2, h3, h4, h5, h6 {
             font-family: var(--font-primary);
             font-weight: 600;
             letter-spacing: -0.025em;
+            color: var(--primary-color);
         }
 
         .btn {
             font-weight: 500;
             letter-spacing: -0.01em;
+            background-color: var(--primary-color);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            background-color: var(--secondary-color);
+            transform: translateY(-2px);
         }
 
         table th {
             font-weight: 600;
             letter-spacing: 0.025em;
+            color: var(--primary-color);
         }
 
         table td {
             font-weight: 400;
+            color: #4B5563;
+        }
+
+        .nav-link {
+            color: #4B5563;
+            transition: all 0.3s ease;
+        }
+
+        .nav-link:hover {
+            color: var(--primary-color);
+            transform: translateY(-2px);
         }
     </style>
 </head>
 
 <body class="gradient-bg min-h-screen">
 <!-- Header Fragment -->
-<header th:fragment="header" class="bg-white/80 backdrop-blur-sm border-b border-white/20 py-4">
+<header th:fragment="header" class="bg-white/80 backdrop-blur-sm border-b border-white/20 py-4 shadow-sm">
     <div class="container mx-auto px-4">
         <nav class="flex justify-between items-center">
             <h1 class="text-2xl font-bold text-primary-600">SECO Test Automation Framework</h1>
-            <div class="space-x-4">
-                <a th:href="@{/tcmasters}" class="text-gray-600 hover:text-primary-600">Manage Testcases</a>
-                <a th:href="@{/tcsteps}" class="text-gray-600 hover:text-primary-600">Manage Teststeps</a>
-                <a th:href="@{/stepconfig/list}" class="text-gray-600 hover:text-primary-600">Manage step config</a>
-                <a th:href="@{/parameters}" class="text-gray-600 hover:text-primary-600">Schema Definition</a>
-                <a th:href="@{/hosts}" class="text-gray-600 hover:text-primary-600">Manage Hosts</a>
+            <div class="space-x-6">
+                <a th:href="@{/tcmasters}" class="nav-link">Manage Testcases</a>
+                <a th:href="@{/tcsteps}" class="nav-link">Manage Teststeps</a>
+                <a th:href="@{/stepconfig/list}" class="nav-link">Manage Step Config</a>
+                <a th:href="@{/parameters}" class="nav-link">Schema Definition</a>
+                <a th:href="@{/hosts}" class="nav-link">Manage Hosts</a>
             </div>
         </nav>
     </div>
