@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Linux Server Monitor</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- CSS Dependencies -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet">
+    <style>
+        .select2-container {
+            width: 100% !important;
+        }
+        .select2-selection {
+            height: 38px !important;
+            padding: 5px !important;
+            border: 1px solid #e2e8f0 !important;
+            border-radius: 0.375rem !important;
+        }
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .chart-container {
+            position: relative;
+            height: 200px;
+        }
+        .error-message {
+            background-color: #fee2e2;
+            border: 1px solid #ef4444;
+            color: #dc2626;
+            padding: 0.75rem;
+            border-radius: 0.375rem;
+            margin-bottom: 1rem;
+        }
+        .success-message {
+            background-color: #dcfce7;
+            border: 1px solid #22c55e;
+            color: #16a34a;
+            padding: 0.75rem;
+            border-radius: 0.375rem;
+            margin-bottom: 1rem;
+        }
+    </style>
+
+    <!-- JavaScript Dependencies -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+</head>
+<body class="bg-gray-100">
+    <div class="min-h-screen">
+        <!-- Header -->
+        <header class="bg-white shadow">
+            <div class="container mx-auto px-4 py-6">
+                <h1 class="text-2xl font-bold text-gray-900">Linux Server Monitor</h1>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="container mx-auto px-4 py-8">
+            <!-- Error/Success Messages -->
+            <div id="messageContainer" class="hidden"></div>
+
+            <!-- Server Selection -->
+            <div class="bg-white rounded-lg shadow p-6 mb-8">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold">Select Server</h2>
+                    <div id="connectionStatus" class="hidden">
+                        <span class="loading-spinner mr-2"></span>
+                        <span class="text-sm text-gray-600">Connecting...</span>
+                    </div>
+                </div>
+                <select id="serverSelect" class="w-full">
+                    <option value="">Search and select a server...</option>
+                </select>
+            </div>
+
+            <!-- Dashboard Content (hidden initially) -->
+            <div id="dashboardContent" class="hidden space-y-8">
+                <!-- System Overview -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- CPU Usage -->
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-lg font-semibold mb-4">CPU Usage</h3>
+                        <div class="chart-container">
+                            <canvas id="cpuChart"></canvas>
+                            <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                                <p class="text-3xl font-bold" id="cpuValue">0%</p>
+                            </div>
+                        </div>
+                        <div class="mt-4 grid grid-cols-3 gap-4 text-sm">
+                            <div>
+                                <p class="text-gray-600">User</p>
+                                <p class="font-semibold" id="cpuUser">0%</p>
+                            </div>
+                            <div>
+                                <p class="text-gray-600">System</p>
+                                <p class="font-semibold" id="cpuSystem">0%</p>
+                            </div>
+                            <div>
+                                <p class="text-gray-600">Idle</p>
+                                <p class="font-semibold" id="cpuIdle">0%</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Memory Usage -->
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-lg font-semibold mb-4">Memory Usage</h3>
+                        <div class="chart-container">
+                            <canvas id="memoryChart"></canvas>
+                            <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                                <p class="text-3xl font-bold" id="memoryValue">0%</p>
+                            </div>
+                        </div>
+                        <div class="mt-4 grid grid-cols-3 gap-4 text-sm">
+                            <div>
+                                <p class="text-gray-600">Total</p>
+                                <p class="font-semibold" id="memTotal">0 GB</p>
+                            </div>
+                            <div>
+                                <p class="text-gray-600">Used</p>
+                                <p class="font-semibold" id="memUsed">0 GB</p>
+                            </div>
+                            <div>
+                                <p class="text-gray-600">Free</p>
+                                <p class="font-semibold" id="memFree">0 GB</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Disk Usage -->
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-lg font-semibold mb-4">Disk Usage</h3>
+                        <div id="diskInfo" class="space-y-4"></div>
+                    </div>
+                </div>
+
+                <!-- Process Management -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                        <h3 class="text-lg font-semibold">Process Management</h3>
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="refreshProcesses()" 
+                                    class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded transition">
+                                Refresh
+                            </button>
+                            <button onclick="showTopCPU()" 
+                                    class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded transition">
+                                Top CPU
+                            </button>
+                            <button onclick="showTopMemory()" 
+                                    class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded transition">
+                                Top Memory
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PID</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CPU %</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Memory %</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">VSZ</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">RSS</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TTY</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">STAT</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Command</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="processList" class="bg-white divide-y divide-gray-200"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Command Runner -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-semibold mb-4">Command Runner</h3>
+                    <div class="space-y-4">
+                        <div class="flex flex-col sm:flex-row gap-4">
+                            <input type="text" id="commandInput" 
+                                   class="flex-1 border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                                   placeholder="Enter command..."
+                                   onkeypress="handleCommandKeyPress(event)">
+                            <button onclick="runCommand()" 
+                                    class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded transition">
+                                Run
+                            </button>
+                        </div>
+                        <pre id="commandOutput" 
+                             class="hidden bg-gray-100 p-4 rounded-lg text-sm font-mono overflow-x-auto"></pre>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="bg-white border-t mt-8">
+            <div class="container mx-auto px-4 py-4">
+                <p class="text-center text-gray-600 text-sm">
+                    Linux Server Monitor - Last update: <span id="lastUpdate">Never</span>
+                </p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Load JavaScript implementation -->
+    <script src="/js/monitor.js"></script>
+</body>
+</html>

@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Linux Server Monitor</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Server Selection -->
+        <div class="bg-white rounded-lg shadow p-6 mb-8">
+            <h3 class="text-lg font-semibold mb-4">Select Server</h3>
+            <select id="serverSelect" class="w-full">
+                <option value="">Select a server...</option>
+            </select>
+        </div>
+
+        <!-- Rest of the dashboard (hidden initially) -->
+        <div id="dashboardContent" class="hidden">
+            <!-- System Overview -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <!-- ... (previous content) ... -->
+            </div>
+
+            <!-- ... (rest of the previous content) ... -->
+        </div>
+    </div>
+
+    <script th:inline="javascript">
+        let currentServerId = null;
+
+        // Initialize select2 dropdown
+        $(document).ready(function() {
+            $('#serverSelect').select2({
+                placeholder: 'Search for a server...',
+                allowClear: true,
+                ajax: {
+                    url: '/api/servers',
+                    dataType: 'json',
+                    delay: 250,
+                    processResults: function(data) {
+                        return {
+                            results: data.map(server => ({
+                                id: server.id,
+                                text: `${server.name} (${server.hostname})`,
+                                description: server.description
+                            }))
+                        };
+                    },
+                    cache: true
+                },
+                templateResult: formatServer,
+                templateSelection: formatServer
+            });
+
+            // Handle server selection
+            $('#serverSelect').on('select2:select', function(e) {
+                currentServerId = e.params.data.id;
+                $('#dashboardContent').removeClass('hidden');
+                refreshDashboard();
+            });
+
+            $('#serverSelect').on('select2:clear', function() {
+                currentServerId = null;
+                $('#dashboardContent').addClass('hidden');
+            });
+        });
+
+        function formatServer(server) {
+            if (!server.id) return server.text;
+            return $(`
+                <div class="flex flex-col">
+                    <div class="font-semibold">${server.text}</div>
+                    ${server.description ? `<div class="text-sm text-gray-600">${server.description}</div>` : ''}
+                </div>
+            `);
+        }
+
+        // Modified dashboard refresh functions to include serverId
+        async function updateSystemInfo() {
+            if (!currentServerId) return;
+            const response = await fetch(`/api/monitor/system/${currentServerId}`);
+            const data = await response.json();
+            // Rest of the update logic remains the same...
+        }
+
+        async function refreshProcesses() {
+            if (!currentServerId) return;
+            const response = await fetch(`/api/monitor/processes/${currentServerId}`);
+            const processes = await response.json();
+            updateProcessTable(processes);
+        }
+
+        async function showTopCPU() {
+            if (!currentServerId) return;
+            const response = await fetch(`/api/monitor/top-cpu/${currentServerId}`);
+            const processes = await response.json();
+            updateProcessTable(processes);
+        }
+
+        async function showTopMemory() {
+            if (!currentServerId) return;
+            const response = await fetch(`/api/monitor/top-memory/${currentServerId}`);
+            const processes = await response.json();
+            updateProcessTable(processes);
+        }
+
+        async function killProcess(pid) {
+            if (!currentServerId) return;
+            if (confirm(`Are you sure you want to kill process ${pid}?`)) {
+                await fetch(`/api/monitor/kill/${currentServerId}/${pid}`, { method: 'POST' });
+                refreshProcesses();
+            }
+        }
+
+        async function runCommand() {
+            if (!currentServerId) return;
+            const command = document.getElementById('commandInput').value;
+            const response = await fetch(`/api/monitor/command/${currentServerId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ command })
+            });
+            const result = await response.json();
+            const output = document.getElementById('commandOutput');
+            output.textContent = result.output;
+            output.classList.remove('hidden');
+        }
+
+        function refreshDashboard() {
+            if (currentServerId) {
+                updateSystemInfo();
+                refreshProcesses();
+            }
+        }
+
+        // Set up auto-refresh
+        setInterval(() => {
+            if (currentServerId) {
+                refreshDashboard();
+            }
+        }, 30000);
+    </script>
+</body>
+</html>
