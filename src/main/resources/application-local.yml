@@ -20,10 +20,16 @@ spring:
     format-sql: true
 
 camel:
+  rest:
+    component: servlet
   springboot:
     name: TcautomationApplication
     main:
       run: true
+  servlet:
+    mapping:
+      context-path: /tca
+    enabled: true
 
 # SSH Configuration
 ssh:
@@ -43,3 +49,4 @@ common:
 
 server:
   port: 8010
+
