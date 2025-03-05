@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head}">
+</head>
+<body class="gradient-bg min-h-screen flex flex-col">
+<!-- Header -->
+<div th:replace="~{fragments :: header}"></div>
+
+<!-- Main Content -->
+<main class="container mx-auto px-4 py-12 flex-grow">
+    <div class="glass-card p-8 rounded-2xl shadow-xl animate__animated animate__fadeIn">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-red-600 bg-clip-text text-transparent tracking-tight">TC Execution Monitoring</h1>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table id="tc-execution-log-table" class="min-w-full bg-white/50 backdrop-blur-sm rounded-lg overflow-hidden">
+                <thead>
+                <tr class="bg-gray-50/50">
+                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Execution ID</th>
+                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">TC ID</th>
+                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Step ID</th>
+                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Start Time</th>
+                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">End Time</th>
+                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Status</th>
+                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Error Message</th>
+                </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200/50">
+                <tr th:each="log : ${logs}" class="hover:bg-gray-50/50 transition-colors">
+                    <td class="py-3 px-4 text-sm font-normal" th:text="${log.executionId}"></td>
+                    <td class="py-3 px-4 text-sm font-normal" th:text="${log.tcId}"></td>
+                    <td class="py-3 px-4 text-sm font-normal" th:text="${log.stepId}"></td>
+                    <td class="py-3 px-4 text-sm font-normal" th:text="${log.startTime}"></td>
+                    <td class="py-3 px-4 text-sm font-normal" th:text="${log.endTime}"></td>
+                    <td class="py-3 px-4 text-sm font-normal" th:text="${log.status}"></td>
+                    <td class="py-3 px-4 text-sm font-normal" th:text="${log.errorMessage}"></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>
+
+<!-- Footer -->
+<div th:replace="~{fragments :: footer}"></div>
+
+<!-- Scripts -->
+<div th:replace="~{fragments :: scripts}"></div>
+
+<!-- Page-specific Script -->
+<script>
+    $(document).ready(function() {
+        $('#tc-execution-log-table').DataTable({
+            "pageLength": 25,
+            "dom": '<"flex items-center justify-between mb-4"lf>rt<"flex items-center justify-between mt-4"ip>',
+            "language": {
+                "search": "",
+                "searchPlaceholder": "Search logs..."
+            }
+        });
+
+        // Add glass-card effect and font styles to DataTables elements
+        $('.dataTables_wrapper .dataTables_filter input').addClass('glass-card px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-normal');
+        $('.dataTables_wrapper .dataTables_length select').addClass('glass-card px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-normal');
+        $('.dataTables_wrapper .dataTables_length label, .dataTables_wrapper .dataTables_filter label').addClass('text-sm font-normal');
+        $('.dataTables_wrapper .dataTables_info, .dataTables_wrapper .dataTables_paginate').addClass('text-sm font-normal');
+    });
+</script>
+</body>
+</html>
