@@ -84,7 +84,7 @@ public class DbUtil {
         }
     }
 
-    private <T> Map<String, Object> convertToMap(T rowData) {
+    public <T> Map<String, Object> convertToMap(T rowData) {
         Map<String, Object> rowMap = new HashMap<>();
         for (Field field : rowData.getClass().getDeclaredFields()) {
             field.setAccessible(true);
@@ -146,16 +146,21 @@ public class DbUtil {
         }
     }
 
-   public <T> T queryForObject(String sql, Class<T> requiredType) {
-    try {
-        log.info("Executing queryForObject SQL: " + sql);
-        return jdbcTemplate.queryForObject(sql, new BeanPropertyRowMapper<>(requiredType));
-    } catch (Exception e) {
-        log.severe("Error executing queryForObject: " + e.getMessage());
-        e.printStackTrace();
-        return null;
+
+    public <T> T queryForObject(String sql, Class<T> requiredType) {
+        try {
+            log.info("Executing queryForObject SQL: " + sql);
+            if (requiredType == Long.class) {
+                return (T) jdbcTemplate.queryForObject(sql, (rs, rowNum) -> rs.getLong(1));
+            }
+            return jdbcTemplate.queryForObject(sql, new BeanPropertyRowMapper<>(requiredType));
+        } catch (Exception e) {
+            log.severe("Error executing queryForObject: " + e.getMessage());
+            e.printStackTrace();
+            return null;
+        }
     }
-}
+
     public int update(String sql, Object... args) {
         return jdbcTemplate.update(sql, args);
     }

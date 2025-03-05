@@ -8,6 +8,7 @@ import com.boa.tcautomation.json.model.ScanWindowDeleteInsertJSON;
 import com.boa.tcautomation.model.AitDbProp;
 import com.boa.tcautomation.model.TcMaster;
 import com.boa.tcautomation.model.TcSteps;
+import com.boa.tcautomation.util.Constants;
 import com.boa.tcautomation.util.DatabaseToCsvUtil;
 import com.boa.tcautomation.util.DbUtil;
 import com.boa.tcautomation.util.SshUtil;
@@ -50,8 +51,13 @@ public class TcExecutionService {
     private static final Logger log = LoggerFactory.getLogger(TcExecutionService.class);
 
     public void deleteInsertScanWindow(TcMaster tcMaster, TcSteps tcStep) {
+        log.info("{}#{} updating TC_Execution log to In Progress", tcMaster.getTcId(), tcStep.getStepId());
+        long tcExecId = tcMasterServiceHelper.insertLogEntry(tcMaster.getTcId(), tcStep.getStepId(), Constants.INPROGRESS);
+        log.info("{}#{} deleting and inserting scan window", tcMaster.getTcId(), tcStep.getStepId());
+
         try {
             if (tcMasterServiceHelper.getAndValidateParametersSchema(tcStep)) {
+                log.info("Parameters -> {}", tcStep.getParameters());
                 ScanWindowDeleteInsertJSON scanWindowDeleteInsertJSON = new ObjectMapper().readValue(tcStep.getParameters(), ScanWindowDeleteInsertJSON.class);
                 String aitNo = tcMaster.getAitNo();
                 if (aitNo.startsWith("AIT_")) {
@@ -62,10 +68,16 @@ public class TcExecutionService {
                     boolean deleteSuccess = tcMasterServiceHelper.deleteAitScanWindow("AIT_" + aitDbProp.getAitNo(), aitDbProp.getDbType());
                     boolean insertSuccess = tcMasterServiceHelper.insertAitScanWindow(aitDbProp);
                 }
+                log.info("{}#{} updating TC_Execution log to Completed", tcMaster.getTcId(), tcStep.getStepId());
+                tcMasterServiceHelper.updateLogEntry(tcExecId, Constants.COMPLETED, "");
             } else {
-                throw new RuntimeException("Failed to get and validate StepConfig");
+                log.info("{}#{} updating TC_Execution log to Failed", tcMaster.getTcId(), tcStep.getStepId());
+                tcMasterServiceHelper.updateLogEntry(tcExecId, Constants.FAILED, "");
+                throw new RuntimeException("Schema validation failed");
             }
         } catch (Exception e) {
+            log.info("{}#{} updating TC_Execution log to Failed", tcMaster.getTcId(), tcStep.getStepId());
+            tcMasterServiceHelper.updateLogEntry(tcExecId, Constants.FAILED, "");
             throw new RuntimeException("Error running command: " + e.getMessage(), e);
         }
     }
@@ -85,19 +97,33 @@ public class TcExecutionService {
     }
 
     public void runLinuxCommand(TcMaster tcMaster, TcSteps step) {
+        log.info("{}#{} updating TC_Execution log to In Progress", tcMaster.getTcId(), step.getStepId());
+        long tcExecId = tcMasterServiceHelper.insertLogEntry(tcMaster.getTcId(), step.getStepId(), Constants.INPROGRESS);
+        log.info("{}#{} running Linux command", tcMaster.getTcId(), step.getStepId());
+
         try {
             if (tcMasterServiceHelper.getAndValidateParametersSchema(step)) {
                 LinuxCommandJSON linuxCommandJSON = new ObjectMapper().readValue(step.getParameters(), LinuxCommandJSON.class);
                 String output = sshUtil.executeCommand(linuxCommandJSON.getHostname(), linuxCommandJSON.getCommand());
+                log.info("{}#{} updating TC_Execution log to Completed", tcMaster.getTcId(), step.getStepId());
+                tcMasterServiceHelper.updateLogEntry(tcExecId, Constants.COMPLETED, "");
             } else {
-                throw new RuntimeException("Failed to get and validate StepConfig");
+                log.info("{}#{} updating TC_Execution log to Failed", tcMaster.getTcId(), step.getStepId());
+                tcMasterServiceHelper.updateLogEntry(tcExecId, Constants.FAILED, "");
+                throw new RuntimeException("Schema validation failed");
             }
         } catch (Exception e) {
+            log.info("{}#{} updating TC_Execution log to Failed", tcMaster.getTcId(), step.getStepId());
+            tcMasterServiceHelper.updateLogEntry(tcExecId, Constants.FAILED, "");
             throw new RuntimeException("Error running command: " + e.getMessage(), e);
         }
     }
 
     public void exportTableToCsv(TcMaster tcMaster, TcSteps step) {
+        log.info("{}#{} updating TC_Execution log to In Progress", tcMaster.getTcId(), step.getStepId());
+        long tcExecId = tcMasterServiceHelper.insertLogEntry(tcMaster.getTcId(), step.getStepId(), Constants.INPROGRESS);
+        log.info("{}#{} exporting table to CSV", tcMaster.getTcId(), step.getStepId());
+
         try {
             if (tcMasterServiceHelper.getAndValidateParametersSchema(step)) {
                 ExportToCSVJSON exportToCSVJSON = tcMasterServiceHelper.parseExportToCSVJSON(step);
@@ -108,15 +134,25 @@ public class TcExecutionService {
                 log.info("Exporting to: " + destination + File.separator + fileName);
                 tcMasterServiceHelper.handleExistingFile(destination, fileName);
                 databaseToCsvUtil.queryToCsv(exportQuery, destination, fileName);
+                log.info("{}#{} updating TC_Execution log to Completed", tcMaster.getTcId(), step.getStepId());
+                tcMasterServiceHelper.updateLogEntry(tcExecId, Constants.COMPLETED, "");
             } else {
+                log.info("{}#{} updating TC_Execution log to Failed", tcMaster.getTcId(), step.getStepId());
+                tcMasterServiceHelper.updateLogEntry(tcExecId, Constants.FAILED, "");
                 throw new RuntimeException("Schema validation failed");
             }
         } catch (Exception e) {
+            log.info("{}#{} updating TC_Execution log to Failed", tcMaster.getTcId(), step.getStepId());
+            tcMasterServiceHelper.updateLogEntry(tcExecId, Constants.FAILED, "");
             throw new RuntimeException("Error running command: " + e.getMessage(), e);
         }
     }
 
     public void resetAndEnableTools(TcMaster tcMaster, TcSteps tcStep) {
+        log.info("{}#{} updating TC_Execution log to In Progress", tcMaster.getTcId(), tcStep.getStepId());
+        long tcExecId = tcMasterServiceHelper.insertLogEntry(tcMaster.getTcId(), tcStep.getStepId(), Constants.INPROGRESS);
+        log.info("{}#{} resetting DB properties and enabling tools", tcMaster.getTcId(), tcStep.getStepId());
+
         try {
             if (tcMasterServiceHelper.getAndValidateParametersSchema(tcStep)) {
                 ResetDbpropAndEnableToolsJSON resetDbpropAndEnableToolsJSON = new ObjectMapper().readValue(tcStep.getParameters(), ResetDbpropAndEnableToolsJSON.class);
@@ -124,11 +160,16 @@ public class TcExecutionService {
                 boolean resetSuccess = dbUtil.executeQuery(resetDbpropQuery);
                 String enableToolsQuery = tcMasterServiceHelper.buildEnableToolsQuery(tcMaster, resetDbpropAndEnableToolsJSON);
                 boolean enableSuccess = dbUtil.executeQuery(enableToolsQuery);
-
+                log.info("{}#{} updating TC_Execution log to Completed", tcMaster.getTcId(), tcStep.getStepId());
+                tcMasterServiceHelper.updateLogEntry(tcExecId, Constants.COMPLETED, "");
             } else {
+                log.info("{}#{} updating TC_Execution log to Failed", tcMaster.getTcId(), tcStep.getStepId());
+                tcMasterServiceHelper.updateLogEntry(tcExecId, Constants.FAILED, "");
                 throw new RuntimeException("Schema validation failed");
             }
         } catch (Exception e) {
+            log.info("{}#{} updating TC_Execution log to Failed", tcMaster.getTcId(), tcStep.getStepId());
+            tcMasterServiceHelper.updateLogEntry(tcExecId, Constants.FAILED, "");
             throw new RuntimeException("Error running command: " + e.getMessage(), e);
         }
     }

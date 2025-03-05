@@ -7,7 +7,7 @@ import jakarta.persistence.*;
 public class TcSteps {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long stepId;
+    private int stepId;
     private String tcId;
     private String stepName;
     @Column(columnDefinition = "TEXT")
@@ -16,11 +16,11 @@ public class TcSteps {
     private String status;
 
     // Getters and Setters
-    public Long getStepId() {
+    public Integer getStepId() {
         return stepId;
     }
 
-    public void setStepId(Long stepId) {
+    public void setStepId(int stepId) {
         this.stepId = stepId;
     }
 

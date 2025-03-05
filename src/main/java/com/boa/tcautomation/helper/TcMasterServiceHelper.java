@@ -3,6 +3,7 @@ package com.boa.tcautomation.helper;
 import com.boa.tcautomation.json.model.ExportToCSVJSON;
 import com.boa.tcautomation.json.model.ResetDbpropAndEnableToolsJSON;
 import com.boa.tcautomation.model.*;
+import com.boa.tcautomation.util.Constants;
 import com.boa.tcautomation.util.DbUtil;
 import com.boa.tcautomation.util.QueryConstants;
 import com.boa.tcautomation.validator.ParameterValidationService;
@@ -16,6 +17,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -212,5 +214,37 @@ public class TcMasterServiceHelper {
             File archiveFile = new File(archivePath, fileName);
             file.renameTo(archiveFile);
         }
+    }
+    public Long insertLogEntry(String tcId, Integer stepId, String status) {
+        String sql = "INSERT INTO TC_EXECUTION_LOG (STEP_ID, ERROR_MESSAGE, START_TIME, END_TIME, TC_ID, STATUS) VALUES (?, ?, ?, ?, ?, ?)";
+        Object[] params = {stepId, null, LocalDateTime.now(), null, tcId, status};
+        dbUtil.update(sql, params);
+        return dbUtil.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
+    }
+
+
+public boolean updateLogEntry(Long executionId, String status, String errorMessage) {
+    TcExecutionLog log = dbUtil.selectRow("TC_EXECUTION_LOG", "EXECUTION_ID", executionId, TcExecutionLog.class);
+    log.setEndTime(LocalDateTime.now());
+    log.setStatus(status);
+    log.setErrorMessage(errorMessage);
+    String sql = buildUpdateQuery("TC_EXECUTION_LOG", "EXECUTION_ID", executionId, dbUtil.convertToMap(log));
+    return dbUtil.executeQuery(sql);
+}
+    public String buildUpdateQuery(String tableName, String primaryKeyColumn, Object primaryKeyValue, Map<String, Object> updatedData) {
+        String setClause = updatedData.entrySet().stream()
+                .map(entry -> {
+                    String key = entry.getKey();
+                    String column = Constants.TC_EXEC_FIELD_TO_COLUMN_MAP.get(key);
+                    Object value = entry.getValue();
+                    if (value instanceof String || value instanceof LocalDateTime) {
+                        return column + " = '" + value + "'";
+                    } else {
+                        return column + " = " + value;
+                    }
+                })
+                .collect(Collectors.joining(", "));
+
+        return "UPDATE " + tableName + " SET " + setClause + " WHERE " + primaryKeyColumn + " = '" + primaryKeyValue + "'";
     }
 }
