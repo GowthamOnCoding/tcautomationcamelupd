@@ -11,6 +11,10 @@
     <div class="glass-card p-8 rounded-2xl shadow-xl animate__animated animate__fadeIn">
         <div class="flex justify-between items-center mb-6">
             <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-red-600 bg-clip-text text-transparent tracking-tight">TC Execution Monitoring</h1>
+            <div>
+                <label for="groupByTcId" class="mr-2">Group by TC ID:</label>
+                <input type="checkbox" id="groupByTcId" onclick="toggleGrouping()">
+            </div>
         </div>
 
         <div class="overflow-x-auto">
@@ -33,7 +37,12 @@
                     <td class="py-3 px-4 text-sm font-normal" th:text="${log.stepId}"></td>
                     <td class="py-3 px-4 text-sm font-normal" th:text="${log.startTime}"></td>
                     <td class="py-3 px-4 text-sm font-normal" th:text="${log.endTime}"></td>
-                    <td class="py-3 px-4 text-sm font-normal" th:text="${log.status}"></td>
+                    <td class="py-3 px-4 text-sm font-normal">
+                        <span th:if="${log.status == 'Completed'}" class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800" th:text="${log.status}"></span>
+                        <span th:if="${log.status == 'Failed'}" class="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800" th:text="${log.status}"></span>
+                        <span th:if="${log.status == 'In Progress'}" class="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800" th:text="${log.status}"></span>
+                        <span th:if="${log.status == 'Pending'}" class="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800" th:text="${log.status}"></span>
+                    </td>
                     <td class="py-3 px-4 text-sm font-normal" th:text="${log.errorMessage}"></td>
                 </tr>
                 </tbody>
@@ -51,7 +60,7 @@
 <!-- Page-specific Script -->
 <script>
     $(document).ready(function() {
-        $('#tc-execution-log-table').DataTable({
+        var table = $('#tc-execution-log-table').DataTable({
             "pageLength": 25,
             "dom": '<"flex items-center justify-between mb-4"lf>rt<"flex items-center justify-between mt-4"ip>',
             "language": {
@@ -66,6 +75,18 @@
         $('.dataTables_wrapper .dataTables_length label, .dataTables_wrapper .dataTables_filter label').addClass('text-sm font-normal');
         $('.dataTables_wrapper .dataTables_info, .dataTables_wrapper .dataTables_paginate').addClass('text-sm font-normal');
     });
+
+    function toggleGrouping() {
+        var table = $('#tc-execution-log-table').DataTable();
+        var groupByTcId = $('#groupByTcId').is(':checked');
+        if (groupByTcId) {
+            table.column(1).visible(false);
+            table.order([1, 'asc']).draw();
+        } else {
+            table.column(1).visible(true);
+            table.order([0, 'asc']).draw();
+        }
+    }
 </script>
 </body>
 </html>
