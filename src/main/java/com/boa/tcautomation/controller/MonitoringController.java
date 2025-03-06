@@ -17,6 +17,6 @@ public class MonitoringController {
     @GetMapping
     public String showMonitoringDashboard(Model model) {
         model.addAttribute("hosts", hostDetailsRepository.findByIsActiveTrue());
-        return "monitoring/dashboard";
+        return "monitoring/dashboard1";
     }
 }
