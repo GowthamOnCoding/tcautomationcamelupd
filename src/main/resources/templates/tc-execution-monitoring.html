@@ -21,19 +21,21 @@
             <table id="tc-execution-log-table" class="min-w-full bg-white/50 backdrop-blur-sm rounded-lg overflow-hidden">
                 <thead>
                 <tr class="bg-gray-50/50">
-                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Execution ID</th>
                     <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">TC ID</th>
-                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Step ID</th>
-                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Start Time</th>
-                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">End Time</th>
                     <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Status</th>
-                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Error Message</th>
                 </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200/50">
-                <tr th:each="log : ${logs}" class="hover:bg-gray-50/50 transition-colors">
-                    <td class="py-3 px-4 text-sm font-normal" th:text="${log.executionId}"></td>
-                    <td class="py-3 px-4 text-sm font-normal" th:text="${log.tcId}"></td>
+                <tr th:each="entry : ${groupedLogs}">
+                    <td class="py-3 px-4 text-sm font-normal" th:text="${entry.key}" onclick="toggleRow('${entry.key}')"></td>
+                    <td class="py-3 px-4 text-sm font-normal">
+                        <span th:if="${tcIdStatuses[entry.key] == 'Completed'}" class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">Completed</span>
+                        <span th:if="${tcIdStatuses[entry.key] == 'Failed'}" class="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">Failed</span>
+                        <span th:if="${tcIdStatuses[entry.key] == 'In Progress'}" class="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">In Progress</span>
+                        <span th:if="${tcIdStatuses[entry.key] == 'Pending'}" class="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">Pending</span>
+                    </td>
+                </tr>
+                <tr th:each="log : ${entry.value}" class="hidden ${entry.key} hover:bg-gray-50/50 transition-colors">
                     <td class="py-3 px-4 text-sm font-normal" th:text="${log.stepId}"></td>
                     <td class="py-3 px-4 text-sm font-normal" th:text="${log.startTime}"></td>
                     <td class="py-3 px-4 text-sm font-normal" th:text="${log.endTime}"></td>
@@ -85,6 +87,13 @@
         } else {
             table.column(1).visible(true);
             table.order([0, 'asc']).draw();
+        }
+    }
+
+    function toggleRow(tcId) {
+        var rows = document.getElementsByClassName(tcId);
+        for (var i = 0; i < rows.length; i++) {
+            rows[i].classList.toggle('hidden');
         }
     }
 </script>

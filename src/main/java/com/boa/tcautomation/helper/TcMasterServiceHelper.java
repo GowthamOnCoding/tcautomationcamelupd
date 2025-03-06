@@ -3,6 +3,7 @@ package com.boa.tcautomation.helper;
 import com.boa.tcautomation.json.model.ExportToCSVJSON;
 import com.boa.tcautomation.json.model.ResetDbpropAndEnableToolsJSON;
 import com.boa.tcautomation.model.*;
+import com.boa.tcautomation.repository.TcExecutionLogRepository;
 import com.boa.tcautomation.util.Constants;
 import com.boa.tcautomation.util.DbUtil;
 import com.boa.tcautomation.util.QueryConstants;
@@ -21,6 +22,7 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -32,7 +34,8 @@ public class TcMasterServiceHelper {
     private Environment env;
     @Autowired
     private ParameterValidationService parameterValidationService;
-
+    @Autowired
+    private TcExecutionLogRepository tcExecutionLogRepository;
     private static final Logger log = LoggerFactory.getLogger(TcMasterServiceHelper.class);
 
     private <T> T executeQuery(String sql, Class<T> clazz) {
@@ -215,22 +218,33 @@ public class TcMasterServiceHelper {
             file.renameTo(archiveFile);
         }
     }
-    public Long insertLogEntry(String tcId, Integer stepId, String status) {
-        String sql = "INSERT INTO TC_EXECUTION_LOG (STEP_ID, ERROR_MESSAGE, START_TIME, END_TIME, TC_ID, STATUS) VALUES (?, ?, ?, ?, ?, ?)";
-        Object[] params = {stepId, null, LocalDateTime.now(), null, tcId, status};
-        dbUtil.update(sql, params);
-        return dbUtil.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
+   public Long insertLogEntry(String tcId, Integer stepId, String status) {
+    TcExecutionLog log = new TcExecutionLog();
+    log.setStepId(stepId);
+    log.setErrorMessage(null);
+    log.setStartTime(LocalDateTime.now());
+    log.setEndTime(null);
+    log.setTcId(tcId);
+    log.setStatus(status);
+    TcExecutionLog savedLog = tcExecutionLogRepository.save(log);
+    return savedLog.getExecutionId();
+}
+
+
+    public boolean updateLogEntry(Long executionId, String status, String errorMessage) {
+        Optional<TcExecutionLog> optionalLog = tcExecutionLogRepository.findById(executionId);
+        if (optionalLog.isPresent()) {
+            TcExecutionLog log = optionalLog.get();
+            log.setEndTime(LocalDateTime.now());
+            log.setStatus(status);
+            log.setErrorMessage(errorMessage);
+            tcExecutionLogRepository.save(log);
+            return true;
+        } else {
+            return false;
+        }
     }
 
-
-public boolean updateLogEntry(Long executionId, String status, String errorMessage) {
-    TcExecutionLog log = dbUtil.selectRow("TC_EXECUTION_LOG", "EXECUTION_ID", executionId, TcExecutionLog.class);
-    log.setEndTime(LocalDateTime.now());
-    log.setStatus(status);
-    log.setErrorMessage(errorMessage);
-    String sql = buildUpdateQuery("TC_EXECUTION_LOG", "EXECUTION_ID", executionId, dbUtil.convertToMap(log));
-    return dbUtil.executeQuery(sql);
-}
     public String buildUpdateQuery(String tableName, String primaryKeyColumn, Object primaryKeyValue, Map<String, Object> updatedData) {
         String setClause = updatedData.entrySet().stream()
                 .map(entry -> {
