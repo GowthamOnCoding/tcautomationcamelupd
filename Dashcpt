@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head}">
+</head>
+<body class="gradient-bg min-h-screen flex flex-col">
+<!-- Header -->
+<div th:replace="~{fragments :: header}"></div>
+
+<!-- Main Content -->
+<main class="container mx-auto px-4 py-12 flex-grow w-full">
+    <div class="glass-card p-8 rounded-2xl shadow-xl animate__animated animate__fadeIn">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-red-600 bg-clip-text text-transparent tracking-tight">Server Monitoring</h1>
+        </div>
+
+        <!-- Host Selection -->
+        <div class="mb-8">
+            <select id="hostSelect" class="glass-card w-full p-2 border rounded-lg">
+                <option value="">Select a host...</option>
+                <option th:each="host : ${hosts}"
+                        th:value="${host.hostName}"
+                        th:text="${host.hostName + ' (' + host.category + ')'}">
+                </option>
+            </select>
+        </div>
+
+        <!-- System Metrics Cards -->
+        <div class="grid md:grid-cols-3 gap-6 mb-8">
+            <!-- CPU Usage -->
+            <div class="glass-card p-6 rounded-xl">
+                <div class="bg-blue-100 p-4 rounded-full mb-4 mx-auto w-16 h-16 flex items-center justify-center">
+                    <i class="fas fa-microchip text-2xl text-blue-600"></i>
+                </div>
+                <h3 class="font-semibold text-lg mb-2 text-blue-600">CPU Usage</h3>
+                <div class="text-center">
+                    <span id="cpuUsage" class="text-3xl font-bold">-</span>
+                    <span class="text-gray-600">%</span>
+                </div>
+                <div class="text-sm text-gray-600 mt-2">
+                    <div>User: <span id="cpuUser">-</span>%</div>
+                    <div>System: <span id="cpuSystem">-</span>%</div>
+                    <div>Idle: <span id="cpuIdle">-</span>%</div>
+                </div>
+            </div>
+
+            <!-- Memory Usage -->
+            <div class="glass-card p-6 rounded-xl">
+                <div class="bg-green-100 p-4 rounded-full mb-4 mx-auto w-16 h-16 flex items-center justify-center">
+                    <i class="fas fa-memory text-2xl text-green-600"></i>
+                </div>
+                <h3 class="font-semibold text-lg mb-2 text-green-600">Memory Usage</h3>
+                <div class="text-center">
+                    <span id="memoryUsage" class="text-3xl font-bold">-</span>
+                    <span class="text-gray-600">MB</span>
+                </div>
+                <div class="text-sm text-gray-600 mt-2">
+                    <div>Total: <span id="memoryTotal">-</span> MB</div>
+                    <div>Used: <span id="memoryUsed">-</span> MB</div>
+                    <div>Free: <span id="memoryFree">-</span> MB</div>
+                </div>
+            </div>
+
+            <!-- Disk Usage -->
+            <div class="glass-card p-6 rounded-xl">
+                <div class="bg-purple-100 p-4 rounded-full mb-4 mx-auto w-16 h-16 flex items-center justify-center">
+                    <i class="fas fa-hard-drive text-2xl text-purple-600"></i>
+                </div>
+                <h3 class="font-semibold text-lg mb-2 text-purple-600">Disk Usage</h3>
+                <div id="diskUsage" class="text-sm text-gray-600">
+                    <!-- Disk usage will be populated dynamically -->
+                </div>
+            </div>
+        </div>
+
+        <!-- System Health Check Card -->
+        <div class="glass-card p-6 rounded-xl mt-8">
+            <h3 class="font-semibold text-lg mb-4">System Health Check</h3>
+            <div id="systemHealth" class="text-center text-sm text-gray-600">
+                <!-- System health details will be shown here -->
+            </div>
+        </div>
+
+        <!-- Command Execution -->
+        <div class="glass-card p-6 rounded-xl mt-8">
+            <h3 class="font-semibold text-lg mb-4">Execute Command</h3>
+            <textarea id="commandInput" class="glass-card w-full p-2 border rounded-lg" rows="4" placeholder="Enter command..."></textarea>
+            <div class="flex justify-between mt-4">
+                <button id="runCommand" class="btn glass-card px-4 py-2 rounded-lg text-green-600 hover:text-green-800 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
+                    Run Command
+                </button>
+                <div id="commandOutput" class="w-full bg-gray-800 text-white p-4 mt-2 rounded-lg">
+                    <!-- Command output will be shown here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- Footer -->
+<div th:replace="~{fragments :: footer}"></div>
+
+<!-- Scripts -->
+<div th:replace="~{fragments :: scripts}"></div>
+
+<!-- Page-specific Script -->
+<script th:inline="javascript">
+    $(document).ready(function() {
+        // Initialize DataTable
+        let processTable = $('#processTable').DataTable({
+            "pageLength": 25,
+            "columns": [
+                { data: 'pid' },
+                { data: 'user' },
+                { data: 'cpu' },
+                { data: 'memory' },
+                { data: 'command' },
+                {
+                    data: null,
+                    orderable: false,
+                    render: function(data) {
+                        return `<button class="btn glass-card px-3 py-1 rounded-lg text-red-600 hover:text-red-800 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg flex items-center gap-2"
+                                onclick="killProcess('${data.pid}')">
+                                <i class="fas fa-trash"></i>
+                                <span class="tracking-tight">Kill</span>
+                                </button>`;
+                    }
+                }
+            ],
+            "dom": '<"flex items-center justify-between mb-4"lf>rt<"flex items-center justify-between mt-4"ip>',
+            "language": {
+                "search": "",
+                "searchPlaceholder": "Search processes..."
+            }
+        });
+
+        // Handle Host Selection
+        $('#hostSelect').change(function() {
+            const host = $(this).val();
+            if (host) {
+                updateSystemInfo(host);
+                updateProcesses(host);
+                updateSystemHealth(host);
+            }
+        });
+
+        // Update System Metrics
+        function updateSystemInfo(host) {
+            $.get(`/api/monitor/system/${host}`, function(data) {
+                // Update CPU metrics
+                $('#cpuUser').text(data.cpu.user.toFixed(1));
+                $('#cpuSystem').text(data.cpu.system.toFixed(1));
+                $('#cpuIdle').text(data.cpu.idle.toFixed(1));
+                $('#cpuUsage').text((100 - data.cpu.idle).toFixed(1));
+
+                // Update memory metrics
+                $('#memoryTotal').text(data.memory.total);
+                $('#memoryUsed').text(data.memory.used);
+                $('#memoryFree').text(data.memory.free);
+                $('#memoryUsage').text(data.memory.used);
+
+                // Update disk usage
+                const diskHtml = data.disk.map(disk => `
+                    <div class="mb-2">
+                        <div class="font-medium">${disk.mountPoint}</div>
+                        <div class="text-xs">
+                            ${disk.used} / ${disk.size} (${disk.usePercentage})
+                        </div>
+                    </div>
+                `).join('');
+                $('#diskUsage').html(diskHtml);
+            }).fail(function() {
+                alert("Error fetching system info!");
+            });
+        }
+
+        // Update Processes
+        function updateProcesses(host) {
+            $.get(`/api/monitor/processes/${host}`, function(data) {
+                processTable.clear().rows.add(data).draw();
+            }).fail(function() {
+                alert("Error fetching processes!");
+            });
+        }
+
+        // Update System Health
+        function updateSystemHealth(host) {
+            $.get(`/api/monitor/health/${host}`, function(data) {
+                let healthHtml = `
+                    <div class="mb-2">CPU Temperature: ${data.cpuTemperature}°C</div>
+                    <div class="mb-2">Disk Health: ${data.diskHealth}</div>
+                    <div class="mb-2">MySQL Service: ${data.mysqlService ? 'Running' : 'Not Running'}</div>
+                    <div class="mb-2">Apache Service: ${data.apacheService ? 'Running' : 'Not Running'}</div>
+                `;
+                $('#systemHealth').html(healthHtml);
+            }).fail(function() {
+                $('#systemHealth').text("Error fetching system health info.");
+            });
+        }
+
+        // Kill Process
+        window.killProcess = function(pid) {
+            const host = $('#hostSelect').val();
+            if (confirm('Are you sure you want to kill this process?')) {
+                $.post(`/api/monitor/kill/${host}/${pid}`, function() {
+                    updateProcesses(host);
+                }).fail(function() {
+                    alert("Error killing process!");
+                });
+            }
+        };
+
+        // Run Command
+        $('#runCommand').click(function() {
+            const command = $('#commandInput').val();
+            if (command) {
+                $.post(`/api/monitor/executeCommand`, { command: command }, function(data) {
+                    $('#commandOutput').text(data.output);
+                }).fail(function() {
+                    $('#commandOutput').text("Error executing command.");
+                });
+            } else {
+                $('#commandOutput').text("Please enter a command.");
+            }
+        });
+    });
+</script>
+</body>
+</html>
