@@ -130,4 +130,21 @@ public class HostDetails {
     public void setProcess(String process) {
         this.process = process;
     }
+
+    @Override
+    public String toString() {
+        return "HostDetails{" +
+                "hostName='" + hostName + '\'' +
+                ", hostFullName='" + hostFullName + '\'' +
+                ", totalCpu=" + totalCpu +
+                ", totalDiskSpaceGb=" + totalDiskSpaceGb +
+                ", profile='" + profile + '\'' +
+                ", isActive=" + isActive +
+                ", lastUpdated=" + lastUpdated +
+                ", totalRamGb=" + totalRamGb +
+                ", category='" + category + '\'' +
+                ", lastUpdatedUser='" + lastUpdatedUser + '\'' +
+                ", process='" + process + '\'' +
+                '}';
+    }
 }

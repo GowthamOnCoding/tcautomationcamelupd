@@ -28,7 +28,7 @@ camel:
       run: true
   servlet:
     mapping:
-      context-path: /tca
+      context-path: /api/*
     enabled: true
 
 # SSH Configuration
