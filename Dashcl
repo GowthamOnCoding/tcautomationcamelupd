@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head}">
+    <!-- This will be replaced by the actual head fragment -->
+    <title>Server Monitoring Dashboard</title>
+    <!-- Adding Font Awesome and animate.css for visual enhancements -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+    <style>
+        /* This style block will be included in the head fragment */
+        .loading-spinner {
+            display: inline-block;
+            width: 2rem;
+            height: 2rem;
+            border: 3px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top-color: #3498db;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .terminal {
+            background-color: #1e293b;
+            color: #a3e635;
+            font-family: 'Courier New', monospace;
+            border-radius: 0.5rem;
+            height: 300px;
+            overflow-y: auto;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .terminal-input {
+            background-color: transparent;
+            border: none;
+            color: #ffffff;
+            font-family: 'Courier New', monospace;
+            width: 100%;
+            padding: 0.5rem;
+            outline: none;
+        }
+        
+        .blinking-cursor::after {
+            content: "|";
+            animation: blink 1s step-end infinite;
+        }
+        
+        @keyframes blink {
+            from, to { opacity: 1; }
+            50% { opacity: 0; }
+        }
+        
+        .error-message {
+            background-color: rgba(254, 226, 226, 0.8);
+            color: #b91c1c;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            backdrop-filter: blur(4px);
+            border-left: 4px solid #dc2626;
+        }
+        
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 1rem;
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen flex flex-col">
+    <!-- Header -->
+    <div th:replace="~{fragments :: header}"></div>
+
+    <!-- Main Content -->
+    <main class="container-fluid px-4 py-6 flex-grow">
+        <div class="glass-card p-4 md:p-8 rounded-2xl shadow-xl animate__animated animate__fadeIn">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+                <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-red-600 bg-clip-text text-transparent tracking-tight mb-4 md:mb-0">Server Monitoring</h1>
+                
+                <!-- Host Selection and Refresh Controls -->
+                <div class="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
+                    <select id="hostSelect" class="glass-card w-full md:w-64 p-2 border rounded-lg">
+                        <option value="">Select a host...</option>
+                        <option th:each="host : ${hosts}"
+                                th:value="${host.hostName}"
+                                th:text="${host.hostName + ' (' + host.category + ')'}">
+                        </option>
+                    </select>
+                    <div class="flex items-center gap-2">
+                        <div class="text-sm text-gray-600">Auto-refresh:</div>
+                        <select id="refreshInterval" class="glass-card p-2 border rounded-lg">
+                            <option value="0">Off</option>
+                            <option value="5000">5s</option>
+                            <option value="10000">10s</option>
+                            <option value="30000" selected>30s</option>
+                            <option value="60000">1m</option>
+                        </select>
+                        <button id="refreshBtn" class="btn glass-card px-3 py-1 rounded-lg text-blue-600 hover:text-blue-800 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg flex items-center gap-2">
+                            <i class="fas fa-sync-alt"></i>
+                            <span class="tracking-tight">Refresh</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Error message area -->
+            <div id="errorContainer" class="hidden error-message mb-6">
+                <div class="flex items-center gap-2">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span id="errorMessage">Error connecting to server</span>
+                </div>
+            </div>
+
+            <!-- Dashboard Grid -->
+            <div class="dashboard-grid mb-8">
+                <!-- CPU Usage -->
+                <div class="glass-card p-4 md:p-6 rounded-xl col-span-12 md:col-span-3">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="bg-blue-100 p-3 rounded-full w-12 h-12 flex items-center justify-center">
+                                <i class="fas fa-microchip text-xl text-blue-600"></i>
+                            </div>
+                            <h3 class="font-semibold text-lg text-blue-600">CPU Usage</h3>
+                        </div>
+                        <div id="cpuSpinner" class="loading-spinner hidden"></div>
+                    </div>
+                    <div class="text-center mb-2">
+                        <span id="cpuUsage" class="text-3xl font-bold">-</span>
+                        <span class="text-gray-600">%</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2.5">
+                        <div id="cpuProgressBar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 text-sm text-gray-600 mt-4">
+                        <div class="text-center">
+                            <div class="font-medium">User</div>
+                            <div id="cpuUser">-</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="font-medium">System</div>
+                            <div id="cpuSystem">-</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="font-medium">Idle</div>
+                            <div id="cpuIdle">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Memory Usage -->
+                <div class="glass-card p-4 md:p-6 rounded-xl col-span-12 md:col-span-3">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="bg-green-100 p-3 rounded-full w-12 h-12 flex items-center justify-center">
+                                <i class="fas fa-memory text-xl text-green-600"></i>
+                            </div>
+                            <h3 class="font-semibold text-lg text-green-600">Memory Usage</h3>
+                        </div>
+                        <div id="memorySpinner" class="loading-spinner hidden"></div>
+                    </div>
+                    <div class="text-center mb-2">
+                        <span id="memoryUsage" class="text-3xl font-bold">-</span>
+                        <span class="text-gray-600"> / </span>
+                        <span id="memoryTotal" class="text-gray-600">-</span>
+                        <span class="text-gray-600">MB</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2.5">
+                        <div id="memoryProgressBar" class="bg-green-600 h-2.5 rounded-full" style="width: 0%"></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 text-sm text-gray-600 mt-4">
+                        <div class="text-center">
+                            <div class="font-medium">Used</div>
+                            <div id="memoryUsedPercent">-</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="font-medium">Free</div>
+                            <div id="memoryFree">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Network Usage - New Card -->
+                <div class="glass-card p-4 md:p-6 rounded-xl col-span-12 md:col-span-3">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="bg-indigo-100 p-3 rounded-full w-12 h-12 flex items-center justify-center">
+                                <i class="fas fa-network-wired text-xl text-indigo-600"></i>
+                            </div>
+                            <h3 class="font-semibold text-lg text-indigo-600">Network</h3>
+                        </div>
+                        <div id="networkSpinner" class="loading-spinner hidden"></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-6 text-sm text-gray-600 mt-2">
+                        <div>
+                            <div class="flex items-center gap-2 font-medium">
+                                <i class="fas fa-arrow-down text-green-500"></i>
+                                <span>Download</span>
+                            </div>
+                            <div class="text-2xl font-bold" id="networkDown">-</div>
+                            <div class="text-xs text-gray-500">Total: <span id="networkDownTotal">-</span></div>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2 font-medium">
+                                <i class="fas fa-arrow-up text-red-500"></i>
+                                <span>Upload</span>
+                            </div>
+                            <div class="text-2xl font-bold" id="networkUp">-</div>
+                            <div class="text-xs text-gray-500">Total: <span id="networkUpTotal">-</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Disk Usage -->
+                <div class="glass-card p-4 md:p-6 rounded-xl col-span-12 md:col-span-3">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="bg-purple-100 p-3 rounded-full w-12 h-12 flex items-center justify-center">
+                                <i class="fas fa-hard-drive text-xl text-purple-600"></i>
+                            </div>
+                            <h3 class="font-semibold text-lg text-purple-600">Disk Usage</h3>
+                        </div>
+                        <div id="diskSpinner" class="loading-spinner hidden"></div>
+                    </div>
+                    <div id="diskUsage" class="text-sm text-gray-600 max-h-48 overflow-y-auto">
+                        <div class="flex items-center justify-center h-24">
+                            <span class="text-gray-400">Select a host to view disk usage</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Process Table -->
+                <div class="glass-card p-4 md:p-6 rounded-xl col-span-12 md:col-span-8">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-semibold text-lg">Running Processes</h3>
+                        <div id="processSpinner" class="loading-spinner hidden"></div>
+                    </div>
+                    <table id="processTable" class="min-w-full bg-white/50 backdrop-blur-sm rounded-lg overflow-hidden">
+                        <thead>
+                        <tr class="bg-gray-50/50">
+                            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">PID</th>
+                            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">User</th>
+                            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">CPU %</th>
+                            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Memory %</th>
+                            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Command</th>
+                            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Actions</th>
+                        </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200/50">
+                        <!-- Process rows will be populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Command Terminal - New Card -->
+                <div class="glass-card p-4 md:p-6 rounded-xl col-span-12 md:col-span-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-semibold text-lg">Command Terminal</h3>
+                        <div id="commandSpinner" class="loading-spinner hidden"></div>
+                    </div>
+                    <div class="mb-2 flex items-center">
+                        <div class="flex-grow relative">
+                            <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                                <span class="text-gray-500">$</span>
+                            </div>
+                            <input type="text" id="commandInput" placeholder="Enter command (e.g., ls, df -h, top -n 1)" 
+                                  class="glass-card w-full pl-8 pr-4 py-2 border rounded-lg" />
+                        </div>
+                        <button id="executeBtn" class="btn glass-card ml-2 px-3 py-2 rounded-lg text-blue-600 hover:text-blue-800 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
+                            <i class="fas fa-play"></i>
+                        </button>
+                    </div>
+                    <div class="terminal">
+                        <div id="terminalOutput"></div>
+                        <div class="blinking-cursor"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <div th:replace="~{fragments :: footer}"></div>
+
+    <!-- Scripts -->
+    <div th:replace="~{fragments :: scripts}"></div>
+
+    <!-- Page-specific Script -->
+    <script th:inline="javascript">
+        $(document).ready(function() {
+            // Global variables
+            let refreshIntervalId = null;
+            let refreshTime = 30000; // Default refresh time (30 seconds)
+            let lastNetworkStats = null;
+            
+            // Initialize DataTable
+            let processTable = $('#processTable').DataTable({
+                "pageLength": 10,
+                "columns": [
+                    { data: 'pid' },
+                    { data: 'user' },
+                    { data: 'cpu' },
+                    { data: 'memory' },
+                    { data: 'command' },
+                    {
+                        data: null,
+                        orderable: false,
+                        render: function(data) {
+                            return `<button class="btn glass-card px-3 py-1 rounded-lg text-red-600 hover:text-red-800 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg flex items-center gap-2"
+                                    onclick="killProcess('${data.pid}')">
+                                    <i class="fas fa-trash"></i>
+                                    <span class="tracking-tight">Kill</span>
+                                    </button>`;
+                        }
+                    }
+                ],
+                "dom": '<"flex items-center justify-between mb-4"lf>rt<"flex items-center justify-between mt-4"ip>',
+                "language": {
+                    "search": "",
+                    "searchPlaceholder": "Search processes...",
+                    "emptyTable": "Select a host to view processes"
+                },
+                "responsive": true
+            });
+
+            // Add glass-card effect and font styles to DataTables elements
+            $('.dataTables_wrapper .dataTables_filter input').addClass('glass-card px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-normal');
+            $('.dataTables_wrapper .dataTables_length select').addClass('glass-card px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-normal');
+            $('.dataTables_wrapper .dataTables_length label, .dataTables_wrapper .dataTables_filter label').addClass('text-sm font-normal');
+            $('.dataTables_wrapper .dataTables_info, .dataTables_wrapper .dataTables_paginate').addClass('text-sm font-normal');
+
+            // Host selection change event
+            $('#hostSelect').change(function() {
+                const host = $(this).val();
+                if (host) {
+                    resetRefreshInterval();
+                    refreshDashboard(host);
+                } else {
+                    clearDashboard();
+                    stopRefreshInterval();
+                }
+            });
+            
+            // Refresh interval change
+            $('#refreshInterval').change(function() {
+                refreshTime = parseInt($(this).val());
+                const host = $('#hostSelect').val();
+                
+                if (host && refreshTime > 0) {
+                    resetRefreshInterval();
+                } else {
+                    stopRefreshInterval();
+                }
+            });
+            
+            // Manual refresh button
+            $('#refreshBtn').click(function() {
+                const host = $('#hostSelect').val();
+                if (host) {
+                    refreshDashboard(host);
+                }
+            });
+            
+            // Command execution
+            $('#executeBtn').click(function() {
+                executeCommand();
+            });
+            
+            $('#commandInput').keypress(function(e) {
+                if (e.which === 13) { // Enter key
+                    executeCommand();
+                }
+            });
+            
+            // Function to execute command
+            function executeCommand() {
+                const command = $('#commandInput').val().trim();
+                const host = $('#hostSelect').val();
+                
+                if (!command) return;
+                if (!host) {
+                    addToTerminal("Error: Please select a host first.");
+                    return;
+                }
+                
+                addToTerminal(`$ ${command}`);
+                $('#commandSpinner').removeClass('hidden');
+                
+                $.ajax({
+                    url: `/api/monitor/execute/${host}`,
+                    type: 'POST',
+                    data: JSON.stringify({ command: command }),
+                    contentType: 'application/json',
+                    success: function(data) {
+                        addToTerminal(data.output);
+                    },
+                    error: function(xhr) {
+                        let errorMsg = 'Error executing command';
+                        try {
+                            const response = JSON.parse(xhr.responseText);
+                            errorMsg = response.message || errorMsg;
+                        } catch (e) {}
+                        addToTerminal(`Error: ${errorMsg}`);
+                    },
+                    complete: function() {
+                        $('#commandSpinner').addClass('hidden');
+                        $('#commandInput').val('').focus();
+                    }
+                });
+            }
+            
+            // Add text to terminal
+            function addToTerminal(text) {
+                const terminal = $('#terminalOutput');
+                
+                // If text contains multiple lines, handle each separately
+                const lines = text.split('\n');
+                for (const line of lines) {
+                    terminal.append(`<div>${line || ' '}</div>`);
+                }
+                
+                // Auto-scroll to bottom
+                const terminalContainer = $('.terminal');
+                terminalContainer.scrollTop(terminalContainer[0].scrollHeight);
+            }
+            
+            // Function to refresh all dashboard data
+            function refreshDashboard(host) {
+                updateSystemInfo(host);
+                updateProcesses(host);
+                updateNetworkInfo(host);
+            }
+            
+            // Function to reset refresh interval
+            function resetRefreshInterval() {
+                stopRefreshInterval();
+                
+                if (refreshTime > 0) {
+                    refreshIntervalId = setInterval(function() {
+                        const host = $('#hostSelect').val();
+                        if (host) {
+                            refreshDashboard(host);
+                        }
+                    }, refreshTime);
+                }
+            }
+            
+            // Function to stop refresh interval
+            function stopRefreshInterval() {
+                if (refreshIntervalId) {
+                    clearInterval(refreshIntervalId);
+                    refreshIntervalId = null;
+                }
+            }
+            
+            // Function to clear dashboard data
+            function clearDashboard() {
+                // Clear CPU data
+                $('#cpuUsage').text('-');
+                $('#cpuUser').text('-');
+                $('#cpuSystem').text('-');
+                $('#cpuIdle').text('-');
+                $('#cpuProgressBar').css('width', '0%');
+                
+                // Clear memory data
+                $('#memoryTotal').text('-');
+                $('#memoryUsed').text('-');
+                $('#memoryUsage').text('-');
+                $('#memoryFree').text('-');
+                $('#memoryUsedPercent').text('-');
+                $('#memoryProgressBar').css('width', '0%');
+                
+                // Clear network data
+                $('#networkDown').text('-');
+                $('#networkUp').text('-');
+                $('#networkDownTotal').text('-');
+                $('#networkUpTotal').text('-');
+                
+                // Clear disk data
+                $('#diskUsage').html('<div class="flex items-center justify-center h-24"><span class="text-gray-400">Select a host to view disk usage</span></div>');
+                
+                // Clear process table
+                processTable.clear().draw();
+                
+                // Hide error message
+                $('#errorContainer').addClass('hidden');
+            }
+            
+            // Function to update system information
+            function updateSystemInfo(host) {
+                $('#cpuSpinner').removeClass('hidden');
+                $('#memorySpinner').removeClass('hidden');
+                $('#diskSpinner').removeClass('hidden');
+                
+                $.ajax({
+                    url: `/api/monitor/system/${host}`,
+                    type: 'GET',
+                    success: function(data) {
+                        // Update CPU metrics
+                        $('#cpuUser').text(data.cpu.user.toFixed(1) + '%');
+                        $('#cpuSystem').text(data.cpu.system.toFixed(1) + '%');
+                        $('#cpuIdle').text(data.cpu.idle.toFixed(1) + '%');
+                        
+                        const cpuUsage = (100 - data.cpu.idle).toFixed(1);
+                        $('#cpuUsage').text(cpuUsage);
+                        $('#cpuProgressBar').css('width', `${cpuUsage}%`);
+                        
+                        // Update color based on usage
+                        if (cpuUsage > 80) {
+                            $('#cpuProgressBar').removeClass('bg-blue-600 bg-yellow-500').addClass('bg-red-600');
+                        } else if (cpuUsage > 50) {
+                            $('#cpuProgressBar').removeClass('bg-blue-600 bg-red-600').addClass('bg-yellow-500');
+                        } else {
+                            $('#cpuProgressBar').removeClass('bg-yellow-500 bg-red-600').addClass('bg-blue-600');
+                        }
+
+                        // Update memory metrics
+                        $('#memoryTotal').text(data.memory.total);
+                        $('#memoryUsed').text(data.memory.used);
+                        $('#memoryFree').text(data.memory.free + ' MB');
+                        $('#memoryUsage').text(data.memory.used);
+                        
+                        const memoryUsagePercent = ((data.memory.used / data.memory.total) * 100).toFixed(1);
+                        $('#memoryUsedPercent').text(memoryUsagePercent + '%');
+                        $('#memoryProgressBar').css('width', `${memoryUsagePercent}%`);
+                        
+                        // Update color based on usage
+                        if (memoryUsagePercent > 80) {
+                            $('#memoryProgressBar').removeClass('bg-green-600 bg-yellow-500').addClass('bg-red-600');
+                        } else if (memoryUsagePercent > 50) {
+                            $('#memoryProgressBar').removeClass('bg-green-600 bg-red-600').addClass('bg-yellow-500');
+                        } else {
+                            $('#memoryProgressBar').removeClass('bg-yellow-500 bg-red-600').addClass('bg-green-600');
+                        }
+
+                        // Update disk usage
+                        const diskHtml = data.disk.map(disk => `
+                            <div class="mb-3">
+                                <div class="flex justify-between items-center mb-1">
+                                    <div class="font-medium">${disk.mountPoint}</div>
+                                    <div class="text-xs">${disk.used} / ${disk.size} (${disk.usePercentage})</div>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-purple-600 h-2 rounded-full" style="width: ${disk.usePercentage}"></div>
+                                </div>
+                            </div>
+                        `).join('');
+                        $('#diskUsage').html(diskHtml);
+                        
+                        // Hide error message if visible
+                        $('#errorContainer').addClass('hidden');
+                    },
+                    error: function(xhr) {
+                        showError('Failed to fetch system information');
+                    },
+                    complete: function() {
+                        $('#cpuSpinner').addClass('hidden');
+                        $('#memorySpinner').addClass('hidden');
+                        $('#diskSpinner').addClass('hidden');
+                    }
+                });
+            }
+            
+            // Function to update network information
+            function updateNetworkInfo(host) {
+                $('#networkSpinner').removeClass('hidden');
+                
+                $.ajax({
+                    url: `/api/monitor/network/${host}`,
+                    type: 'GET',
+                    success: function(data) {
+                        // Calculate speeds if we have previous data
+                        if (lastNetworkStats) {
+                            const timeDiff = (data.timestamp - lastNetworkStats.timestamp) / 1000; // seconds
+                            const downDiff = data.bytesReceived - lastNetworkStats.bytesReceived;
+                            const upDiff = data.bytesSent - lastNetworkStats.bytesSent;
+                            
+                            const downSpeed = formatNetworkSpeed(downDiff / timeDiff);
+                            const upSpeed = formatNetworkSpeed(upDiff / timeDiff);
+                            
+                            $('#networkDown').text(downSpeed);
+                            $('#networkUp').text(upSpeed);
+                        } else {
+                            $('#networkDown').text('Measuring...');
+                            $('#networkUp').text('Measuring...');
+                        }
+                        
+                        // Update totals
+                        $('#networkDownTotal').text(formatDataSize(data.bytesReceived));
+                        $('#networkUpTotal').text(formatDataSize(data.bytesSent));
+                        
+                        // Save current stats for next comparison
+                        lastNetworkStats = data;
+                    },
+                    error: function(xhr) {
+                        $('#networkDown').text('-');
+                        $('#networkUp').text('-');
+                        $('#networkDownTotal').text('-');
+                        $('#networkUpTotal').text('-');
+                    },
+                    complete: function() {
+                        $('#networkSpinner').addClass('hidden');
+                    }
+                });
+            }
+            
+            // Format network speed
+            function formatNetworkSpeed(bytesPerSec) {
+                if (bytesPerSec < 1024) {
+                    return bytesPerSec.toFixed(1) + ' B/s';
+                } else if (bytesPerSec < 1024 * 1024) {
+                    return (bytesPerSec / 1024).toFixed(1) + ' KB/s';
+                } else {
+                    return (bytesPerSec / (1024 * 1024)).toFixed(1) + ' MB/s';
+                }
+            }
+            
+            // Format data size
+            function formatDataSize(bytes) {
+                if (bytes < 1024) {
+                    return bytes + ' B';
+                } else if (bytes < 1024 * 1024) {
+                    return (bytes / 1024).toFixed(1) + ' KB';
+                } else if (bytes < 1024 * 1024 * 1024) {
+                    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+                } else {
+                    return (bytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB';
+                }
+            }
+
+            // Function to update processes
+            function updateProcesses(host) {
+                $('#processSpinner').removeClass('hidden');
+                
+                $.ajax({
+                    url: `/api/monitor/processes/${host}`,
+                    type: 'GET',
+                    success: function(data) {
+                        processTable.clear().rows.add(data).draw();
+                    },
+                    error: function(xhr) {
+                        processTable.clear().draw();
+                        showError('Failed to fetch process information');
+                    },
+                    complete: function() {
+                        $('#processSpinner').addClass('hidden');
+                    }
+                });
+            }
+            
+            // Function to show error message
+            function showError(message) {
+                $('#errorMessage').text(message);
+                $('#errorContainer').removeClass('hidden');
+            }
+
+            // Kill process function
+            window.killProcess = function(pid) {
+                const host = $('#hostSelect').val();
+                if (confirm('Are you sure you want to kill this process?')) {
+                    $.
