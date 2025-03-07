@@ -206,7 +206,7 @@
 /* Style the buttons */
 .dataTables_wrapper .dt-buttons {
     display: flex;
-    gap: 10px; /* Add spacing between buttons */
+    gap: 5px; /* Add spacing between buttons */
 }
 
 .dataTables_wrapper .dt-buttons .dt-button {
@@ -243,27 +243,27 @@
             </h1>
             <div class="space-x-6">
                 <a th:href="@{/tcmasters}" class="nav-link" x-data="{hover: false}" @mouseenter="hover = true" @mouseleave="hover = false">
-                    <i class="ph-stack me-1"></i> Manage Testcases
+                    <i class="ph-stack me-1"></i> Testcases
                     <span x-show="hover" x-transition class="absolute top-full left-0 w-full h-0.5 bg-blue-500"></span>
                 </a>
                 <a th:href="@{/tcsteps}" class="nav-link" x-data="{hover: false}" @mouseenter="hover = true" @mouseleave="hover = false">
-                    <i class="ph-list-checks me-1"></i> Manage Teststeps
+                    <i class="ph-list-checks me-1"></i> Teststeps
                     <span x-show="hover" x-transition class="absolute top-full left-0 w-full h-0.5 bg-blue-500"></span>
                 </a>
                 <a th:href="@{/tc-execution-monitoring}" class="nav-link" x-data="{hover: false}" @mouseenter="hover = true" @mouseleave="hover = false">
-                    <i class="ph-chart-line me-1"></i> Monitor TC Execution
+                    <i class="ph-chart-line me-1"></i> Monitoring
                     <span x-show="hover" x-transition class="absolute top-full left-0 w-full h-0.5 bg-blue-500"></span>
                 </a>
                 <a th:href="@{/stepconfig/list}" class="nav-link" x-data="{hover: false}" @mouseenter="hover = true" @mouseleave="hover = false">
-                    <i class="ph-gear me-1"></i> Manage Step Config
+                    <i class="ph-gear me-1"></i> Config
                     <span x-show="hover" x-transition class="absolute top-full left-0 w-full h-0.5 bg-blue-500"></span>
                 </a>
                 <a th:href="@{/parameters}" class="nav-link" x-data="{hover: false}" @mouseenter="hover = true" @mouseleave="hover = false">
-                    <i class="ph-sitemap me-1"></i> Schema Definition
+                    <i class="ph-sitemap me-1"></i> Schema
                     <span x-show="hover" x-transition class="absolute top-full left-0 w-full h-0.5 bg-blue-500"></span>
                 </a>
                 <a th:href="@{/monitor}" class="nav-link" x-data="{hover: false}" @mouseenter="hover = true" @mouseleave="hover = false">
-                    <i class="ph-heartbeat me-1"></i> System Monitor
+                    <i class="ph-heartbeat me-1"></i> Servers
                     <span x-show="hover" x-transition class="absolute top-full left-0 w-full h-0.5 bg-blue-500"></span>
                 </a>
             </div>

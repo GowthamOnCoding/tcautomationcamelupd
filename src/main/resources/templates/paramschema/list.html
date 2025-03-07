@@ -1,6 +1,13 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments :: head}">
+    <style>
+        .json-key { color: #d14; }
+        .json-value { color: #099; }
+        .json-string { color: #690; }
+        .json-boolean { color: #f00; }
+        .json-null { color: #f00; }
+    </style>
 </head>
 <body class="gradient-bg min-h-screen flex flex-col">
 <!-- Header -->
@@ -38,18 +45,12 @@
                     <td class="py-3 px-4 text-sm font-normal" th:text="${parameter.schemaVersion}"></td>
                     <td class="py-3 px-4 text-sm font-normal">
                         <div class="relative group">
-                                    <pre class="whitespace-pre-wrap font-mono text-xs bg-gray-50/50 p-2 rounded-lg overflow-x-auto max-w-[300px] transition-all duration-300 hover:bg-gray-100/50"
-                                         th:if="${parameter.schemaDefinition != null and not #strings.isEmpty(parameter.schemaDefinition)}"
-                                         th:attr="data-json=${parameter.schemaDefinition}">
-                                        <code class="json-block" th:text="${parameter.schemaDefinition}"></code>
-                                    </pre>
+                            <pre class="whitespace-pre-wrap font-mono text-xs bg-gray-50/50 p-2 rounded-lg overflow-x-auto max-w-[300px] transition-all duration-300 hover:bg-gray-100/50 json-container"
+                                 th:if="${parameter.schemaDefinition != null and not #strings.isEmpty(parameter.schemaDefinition)}"
+                                 th:attr="data-json=${parameter.schemaDefinition}">
+                                <code class="json-block" th:text="${parameter.schemaDefinition}"></code>
+                            </pre>
                             <span th:if="${parameter.schemaDefinition == null or #strings.isEmpty(parameter.schemaDefinition)}" class="text-gray-400">N/A</span>
-
-                            <!-- Copy button -->
-                            <button class="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1 hover:bg-gray-200/50 rounded-lg"
-                                    onclick="navigator.clipboard.writeText(this.parentElement.querySelector('code').textContent)">
-                                <i class="fas fa-copy text-gray-400 text-xs hover:text-gray-600"></i>
-                            </button>
                         </div>
                     </td>
                     <td class="py-3 px-4">
@@ -87,68 +88,44 @@
 <!-- Scripts -->
 <div th:replace="~{fragments :: scripts}"></div>
 
-<!-- Initialize DataTables -->
 <script>
     $(document).ready(function() {
-        // Check if DataTable is already initialized
-        if ($.fn.DataTable.isDataTable('#paramschema-table')) {
-            // Destroy the existing DataTable
-            $('#paramschema-table').DataTable().destroy();
-        }
-
-        // Initialize DataTable
         $('#paramschema-table').DataTable({
             "pageLength": 25,
-            "columnDefs": [
-                { "orderable": false, "targets": [7] } // Corrected index for Actions column
-            ],
-            "dom": '<"flex items-center justify-between mb-4"lf>rt<"flex items-center justify-between mt-4"ip>',
-            "language": {
-                "search": "",
-                "searchPlaceholder": "Search schemas..."
-            }
+            "columnDefs": [{ "orderable": false, "targets": [7] }],
+            "dom": 'lfBrtip',
+            "buttons": [
+                { extend: 'csv', text: 'Export CSV' },
+                { extend: 'excel', text: 'Export Excel' },
+                { extend: 'pdf', text: 'Export PDF' }
+            ]
         });
 
-        // Add glass-card effect and font styles to DataTables elements
-        $('.dataTables_wrapper .dataTables_filter input').addClass('glass-card px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-normal');
-        $('.dataTables_wrapper .dataTables_length select').addClass('glass-card px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-normal');
-        $('.dataTables_wrapper .dataTables_length label, .dataTables_wrapper .dataTables_filter label').addClass('text-sm font-normal');
-        $('.dataTables_wrapper .dataTables_info, .dataTables_wrapper .dataTables_paginate').addClass('text-sm font-normal');
+        // JSON Syntax Highlighting
+        // JSON Syntax Highlighting
+$('.json-block').each(function() {
+    let jsonData = $(this).text().trim();
+    try {
+        let formattedJson = JSON.stringify(JSON.parse(jsonData), null, 2);
 
-        // Format JSON displays (if applicable)
-        function syntaxHighlight(json) {
-            if (typeof json !== 'string') return json;
-            try {
-                json = JSON.stringify(JSON.parse(json), null, 2);
-            } catch (e) {
-                return json; // Return original if invalid JSON
-            }
+        // Enhanced regex patterns for better syntax highlighting
+        formattedJson = formattedJson
+            // Highlight property keys with quotes
+            .replace(/("(?:\\.|[^"\\])*")\s*:/g, '<span class="json-key">$1</span>:')
+            // Highlight string values
+            .replace(/:\s*("(?:\\.|[^"\\])*")/g, ': <span class="json-string">$1</span>')
+            // Highlight numeric values
+            .replace(/:\s*(-?\d+\.?\d*)/g, ': <span class="json-value">$1</span>')
+            // Highlight boolean values
+            .replace(/:\s*(true|false)/g, ': <span class="json-boolean">$1</span>')
+            // Highlight null values
+            .replace(/:\s*(null)/g, ': <span class="json-null">$1</span>');
 
-            return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
-                function (match) {
-                    let cls = 'text-gray-600';
-                    if (/^"/.test(match)) {
-                        if (/:$/.test(match)) {
-                            cls = 'text-purple-600';
-                        } else {
-                            cls = 'text-green-600';
-                        }
-                    } else if (/true|false/.test(match)) {
-                        cls = 'text-blue-600';
-                    } else if (/null/.test(match)) {
-                        cls = 'text-red-600';
-                    }
-                    return '<span class="' + cls + '">' + match + '</span>';
-                });
-        }
-
-        // Apply formatting after table initialization
-        $('#paramschema-table').on('draw.dt', function () {
-            $('.json-block').each(function () {
-                const formatted = syntaxHighlight($(this).text());
-                $(this).html(formatted);
-            });
-        }).DataTable().draw(); // Trigger initial draw
+        $(this).html(formattedJson);
+    } catch (e) {
+        console.warn('Invalid JSON format:', jsonData, e);
+    }
+});
     });
 </script>
 </body>

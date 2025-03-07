@@ -95,7 +95,36 @@
             "columnDefs": [
                 { "orderable": false, "targets": [5] } // Corrected index for Actions column
             ],
-            "dom": '<"flex items-center justify-between mb-4"lf>rt<"flex items-center justify-between mt-4"ip>',
+            "dom": '<"flex justify-between items-center mb-4"<"flex items-center gap-4"l><"flex items-center gap-4"f><"flex items-center gap-4"B>>rt<"flex justify-between items-center mt-4"ip>',
+            "buttons": [
+                {
+                    extend: 'csv',
+                    text: '<i class="ph-file-csv"></i> Export CSV',
+                    exportOptions: {
+                        modifier: {
+                            search: 'applied' // Export only filtered rows
+                        }
+                    }
+                },
+                {
+                    extend: 'excel',
+                    text: '<i class="ph-file-xls"></i> Export Excel',
+                    exportOptions: {
+                        modifier: {
+                            search: 'applied' // Export only filtered rows
+                        }
+                    }
+                },
+                {
+                    extend: 'pdf',
+                    text: '<i class="ph-file-pdf"></i> Export PDF',
+                    exportOptions: {
+                        modifier: {
+                            search: 'applied' // Export only filtered rows
+                        }
+                    }
+                }
+            ],
             "language": {
                 "search": "",
                 "searchPlaceholder": "Search steps..."
