@@ -29,6 +29,7 @@ public class DatabaseToCsvUtil extends RouteBuilder {
                 .routeId("queryToCsvRoute")
                 .log("Executing query: ${body}")
                 .to("jdbc:dataSource")
+                .log("Query result: ${body}")
                 .marshal().csv()
                 .log("Writing to file: ${header.destination}/${header.fileName}")
                 .toD("file:${header.destination}?fileName=${header.fileName}"); // Use headers for destination and fileName

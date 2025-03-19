@@ -42,7 +42,7 @@ ssh:
 logging:
   level:
     root: INFO
-    com.boa.TcautomationApplication: DEBUG
+    com.boa.TcautomationApplication: info
 
 common:
   destination: C:\\tca

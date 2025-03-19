@@ -16,7 +16,7 @@ public class TcSteps {
     private String status;
 
     // Getters and Setters
-    public Integer getStepId() {
+    public int getStepId() {
         return stepId;
     }
 

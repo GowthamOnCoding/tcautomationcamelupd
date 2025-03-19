@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments :: head}">
+    <link rel="stylesheet" href="https://unpkg.com/tabulator-tables/dist/css/tabulator.min.css">
 </head>
 <body class="gradient-bg min-h-screen flex flex-col">
 <!-- Header -->
@@ -18,57 +19,7 @@
             </a>
         </div>
 
-        <div class="overflow-x-auto">
-            <table id="tcmasters-table" class="min-w-full bg-white/50 backdrop-blur-sm rounded-lg overflow-hidden data-table">
-                <thead>
-                <tr class="bg-gray-50/50">
-                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">ID</th>
-                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Name</th>
-                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Description</th>
-                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Created By</th>
-                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Created Date</th>
-                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Modified By</th>
-                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Modified Date</th>
-                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Status</th>
-                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">AIT No</th>
-                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Config IDs</th>
-                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Actions</th>
-                </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-200/50">
-                <tr th:each="tcmaster : ${tcmasters}" class="hover:bg-gray-50/50 transition-colors">
-                    <td class="py-3 px-4 text-sm font-normal" th:text="${tcmaster.tcId}">[No ID]</td>
-                    <td class="py-3 px-4 text-sm font-normal" th:text="${tcmaster.tcName}"></td>
-                    <td class="py-3 px-4 text-sm font-normal" th:text="${tcmaster.description}"></td>
-                    <td class="py-3 px-4 text-sm font-normal" th:text="${tcmaster.createdBy}"></td>
-                    <td class="py-3 px-4 text-sm font-normal" th:text="${tcmaster.createdDate != null} ? ${#temporals.format(tcmaster.createdDate, 'yyyy-MM-dd HH:mm:ss')} : ''"></td>
-                    <td class="py-3 px-4 text-sm font-normal" th:text="${tcmaster.modifiedBy} ?: ''"></td>
-                    <td class="py-3 px-4 text-sm font-normal" th:text="${tcmaster.modifiedDate != null} ? ${#temporals.format(tcmaster.modifiedDate, 'yyyy-MM-dd HH:mm:ss')} : ''"></td>
-                    <td class="py-3 px-4">
-                        <span th:if="${tcmaster.isActive}" class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">Active</span>
-                        <span th:unless="${tcmaster.isActive}" class="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">Inactive</span>
-                    </td>
-                    <td class="py-3 px-4 text-sm font-normal" th:text="${tcmaster.aitNo}"></td>
-                    <td class="py-3 px-4 text-sm font-normal" th:text="${tcmaster.configIds}"></td>
-                    <td class="py-3 px-4">
-                        <div class="flex items-center space-x-3">
-                            <a th:href="@{/tcmasters/edit/{id}(id=${tcmaster.tcId})}"
-                               class="btn glass-card px-3 py-1 rounded-lg text-blue-600 hover:text-blue-800 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg flex items-center gap-2">
-                                <i class="ph-pencil-simple"></i>
-                                <span class="tracking-tight">Edit</span>
-                            </a>
-                            <a th:href="@{/tcmasters/delete/{id}(id=${tcmaster.tcId})}"
-                               class="btn glass-card px-3 py-1 rounded-lg text-red-600 hover:text-red-800 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg flex items-center gap-2"
-                               onclick="return confirm('Are you sure you want to delete this test case?');">
-                                <i class="ph-trash"></i>
-                                <span class="tracking-tight">Delete</span>
-                            </a>
-                        </div>
-                    </td>
-                </tr>
-                </tbody>
-            </table>
-        </div>
+        <div id="tcmasters-table"></div>
     </div>
 </main>
 
@@ -77,79 +28,44 @@
 
 <!-- Scripts -->
 <div th:replace="~{fragments :: scripts}"></div>
-
-<!-- Page-specific Script -->
+<script src="https://unpkg.com/tabulator-tables/dist/js/tabulator.min.js"></script>
 <script>
-    $(document).ready(function() {
-        if (!$.fn.DataTable.isDataTable('#tcmasters-table')) {
-            $('#tcmasters-table').DataTable({
-                "pageLength": 25,
-                "columnDefs": [
-                    { "orderable": false, "targets": [10] } // Disable sorting for Actions column
-                ],
-                "dom": '<"flex justify-between items-center mb-4"<"flex items-center gap-4"l><"flex items-center gap-4"f><"flex items-center gap-4"B>>rt<"flex justify-between items-center mt-4"ip>', // Custom DOM layout
-                "initComplete": function () {
-                    var api = this.api();
-                    api.columns().eq(0).each(function (colIdx) {
-                        var cell = api.column(colIdx).header();
-                        var title = $(cell).text();
-                        if (title !== 'Actions') {
-                            $(cell).append('<br><input type="text" placeholder="Search ' + title + '" />');
-                            $('input', api.column(colIdx).header()).on('keyup change', function () {
-                                api.column(colIdx).search(this.value).draw();
-                            });
-                        }
-                    });
-                },
-                "buttons": [
-                    {
-                        extend: 'csv',
-                        text: '<i class="ph-file-csv"></i> Export CSV',
-                        exportOptions: {
-                            modifier: {
-                                search: 'applied' // Export only filtered rows
-                            }
-                        }
-                    },
-                    {
-                        extend: 'excel',
-                        text: '<i class="ph-file-xls"></i> Export Excel',
-                        exportOptions: {
-                            modifier: {
-                                search: 'applied' // Export only filtered rows
-                            }
-                        }
-                    },
-                    {
-                        extend: 'pdf',
-                        text: '<i class="ph-file-pdf"></i> Export PDF',
-                        exportOptions: {
-                            modifier: {
-                                search: 'applied' // Export only filtered rows
-                            }
-                        }
+    document.addEventListener("DOMContentLoaded", function() {
+        var table = new Tabulator("#tcmasters-table", {
+            layout: "fitDataStretch",
+            responsiveLayout: "collapse",
+            addRowPos: "top",
+            columns: [
+                {title: "ID", field: "tcId", editor: false},
+                {title: "Name", field: "tcName", editor: "input"},
+                {title: "Description", field: "description", editor: "textarea"},
+                {title: "Created By", field: "createdBy", editor: false},
+                {title: "Created Date", field: "createdDate", editor: false},
+                {title: "Modified By", field: "modifiedBy", editor: "input"},
+                {title: "Modified Date", field: "modifiedDate", editor: false},
+                {title: "Status", field: "isActive", editor: "tickCross", formatter:"tickCross"},
+                {title: "AIT No", field: "aitNo", editor: "input"},
+                {title: "Config IDs", field: "configIds", editor: "input"},
+                {title: "Actions", formatter: function(){ return "<button class='btn-delete'>Delete</button>"; }, cellClick:function(e, cell){
+                    let row = cell.getRow();
+                    if(confirm("Are you sure you want to delete this test case?")) {
+                        row.delete();
                     }
-                ],
-                "language": {
-                    "search": "", // Remove the "Search" label
-                    "searchPlaceholder": "Search..." // Add placeholder text
-                },
-                "drawCallback": function () {
-                    $('.data-table tbody tr').addClass('animate__animated animate__fadeIn');
-                }
-            });
+                }}
+            ],
+            data: /*[[${tcmasters}]]*/ []
+        });
 
-            // Ensure the global search box is rendered and styled
-            $('.dataTables_wrapper .dataTables_filter').html(
-                '<input type="search" class="glass-card px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-normal" placeholder="Search..." aria-controls="tcmasters-table">'
-            );
-
-            // Style adjustments for the search box
-            $('.dataTables_wrapper .dataTables_filter input')
-                .addClass('glass-card px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-normal')
-                .attr('placeholder', 'Search...'); // Set placeholder text
-            $('.dataTables_wrapper .dataTables_filter label').remove(); // Remove the "Search" label
-        }
+        table.on("cellEdited", function(cell){
+            let updatedData = cell.getData();
+            fetch(`/tcmasters/update/${updatedData.tcId}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(updatedData)
+            }).then(response => response.json())
+              .then(data => console.log("Update Success", data))
+              .catch(error => console.error("Update Failed", error));
+        });
     });
 </script>
 </body>

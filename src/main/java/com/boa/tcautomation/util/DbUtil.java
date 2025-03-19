@@ -9,7 +9,9 @@ import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 @Component
 public class DbUtil {
@@ -17,17 +19,17 @@ public class DbUtil {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
-    private static final Logger log = Logger.getLogger(DbUtil.class.getName());
+    private static final Logger log = LoggerFactory.getLogger(DbUtil.class.getName());
 
     public boolean addRow(String tableName, Map<String, Object> rowData) {
         try {
             String columns = String.join(", ", rowData.keySet());
             String values = String.join(", ", rowData.values().stream().map(value -> "'" + value + "'").toArray(String[]::new));
             String sql = "INSERT INTO " + tableName + " (" + columns + ") VALUES (" + values + ")";
-            log.info("Executing addRow SQL: " + sql);
+           log.debug("Executing addRow SQL: " + sql);
             return executeQuery(sql);
         } catch (Exception e) {
-            log.severe("Error adding row: " + e.getMessage());
+            log.error("Error adding row: " + e.getMessage());
             e.printStackTrace();
             return false;
         }
@@ -36,10 +38,10 @@ public class DbUtil {
     public boolean deleteRow(String tableName, String columnName, Object value) {
         try {
             String sql = "DELETE FROM " + tableName + " WHERE " + columnName + " = '" + value + "'";
-            log.info("Executing deleteRow SQL: " + sql);
+           log.debug("Executing deleteRow SQL: " + sql);
             return executeQuery(sql);
         } catch (Exception e) {
-            log.severe("Error deleting row: " + e.getMessage());
+           log.error("Error deleting row: " + e.getMessage());
             e.printStackTrace();
             return false;
         }
@@ -51,10 +53,10 @@ public class DbUtil {
                     .map(entry -> entry.getKey() + " = '" + entry.getValue() + "'")
                     .toArray(String[]::new));
             String sql = "UPDATE " + tableName + " SET " + setClause + " WHERE " + columnName + " = '" + value + "'";
-            log.info("Executing updateRow SQL: " + sql);
+           log.debug("Executing updateRow SQL: " + sql);
             return executeQuery(sql);
         } catch (Exception e) {
-            log.severe("Error updating row: " + e.getMessage());
+           log.error("Error updating row: " + e.getMessage());
             e.printStackTrace();
             return false;
         }
@@ -63,10 +65,10 @@ public class DbUtil {
     public boolean cloneRow(String tableName, String columnName, Object value) {
         try {
             String sql = "INSERT INTO " + tableName + " SELECT * FROM " + tableName + " WHERE " + columnName + " = '" + value + "'";
-            log.info("Executing cloneRow SQL: " + sql);
+           log.debug("Executing cloneRow SQL: " + sql);
             return executeQuery(sql);
         } catch (Exception e) {
-            log.severe("Error cloning row: " + e.getMessage());
+           log.error("Error cloning row: " + e.getMessage());
             e.printStackTrace();
             return false;
         }
@@ -75,10 +77,10 @@ public class DbUtil {
     public <T> boolean insertRow(String tableName, T rowData) {
         try {
             Map<String, Object> rowMap = convertToMap(rowData);
-            log.info("Inserting row into table: " + tableName + " with data: " + rowMap);
+           log.debug("Inserting row into table: " + tableName + " with data: " + rowMap);
             return addRow(tableName, rowMap);
         } catch (Exception e) {
-            log.severe("Error inserting row: " + e.getMessage());
+           log.error("Error inserting row: " + e.getMessage());
             e.printStackTrace();
             return false;
         }
@@ -91,22 +93,22 @@ public class DbUtil {
             try {
                 rowMap.put(field.getName(), field.get(rowData));
             } catch (IllegalAccessException e) {
-                log.severe("Error accessing field value: " + e.getMessage());
+               log.error("Error accessing field value: " + e.getMessage());
                 e.printStackTrace();
                 throw new RuntimeException("Error accessing field value", e);
             }
         }
-        log.info("Converted object to map: " + rowMap);
+       log.debug("Converted object to map: " + rowMap);
         return rowMap;
     }
 
     public <T> T selectRow(String tableName, String columnName, Object value, Class<T> mappingClass) {
         try {
             String sql = "SELECT * FROM " + tableName + " WHERE " + columnName + " = ?";
-            log.info("Executing selectRow SQL: " + sql);
+           log.debug("Executing selectRow SQL: " + sql);
             return jdbcTemplate.queryForObject(sql, new Object[]{value}, new BeanPropertyRowMapper<>(mappingClass));
         } catch (Exception e) {
-            log.severe("Error selecting row: " + e.getMessage());
+           log.error("Error selecting row: " + e.getMessage());
             e.printStackTrace();
             return null;
         }
@@ -114,10 +116,10 @@ public class DbUtil {
 
     public <T> List<T> queryForListWithMapping(String sql, Class<T> mappingClass) {
         try {
-            log.info("Executing queryForListWithMapping SQL: " + sql);
+           log.debug("Executing queryForListWithMapping SQL: " + sql);
             return jdbcTemplate.query(sql, new BeanPropertyRowMapper<>(mappingClass));
         } catch (Exception e) {
-            log.severe("Error querying for list with mapping: " + e.getMessage());
+           log.error("Error querying for list with mapping: " + e.getMessage());
             e.printStackTrace();
             return null;
         }
@@ -125,11 +127,11 @@ public class DbUtil {
 
     public boolean executeQuery(String sql) {
         try {
-            log.info("Executing query: " + sql);
+           log.debug("Executing query: " + sql);
             jdbcTemplate.execute(sql);
             return true;
         } catch (Exception e) {
-            log.severe("Error executing query: " + sql + " - " + e.getMessage());
+           log.error("Error executing query: " + sql + " - " + e.getMessage());
             e.printStackTrace();
             return false;
         }
@@ -137,10 +139,10 @@ public class DbUtil {
 
     public List<Map<String, Object>> queryForList(String sql) {
         try {
-            log.info("Executing queryForList SQL: " + sql);
+           log.debug("Executing queryForList SQL: " + sql);
             return jdbcTemplate.queryForList(sql);
         } catch (Exception e) {
-            log.severe("Error querying for list: " + e.getMessage());
+           log.error("Error querying for list: " + e.getMessage());
             e.printStackTrace();
             return null;
         }
@@ -149,13 +151,13 @@ public class DbUtil {
 
     public <T> T queryForObject(String sql, Class<T> requiredType) {
         try {
-            log.info("Executing queryForObject SQL: " + sql);
+           log.debug("Executing queryForObject SQL: " + sql);
             if (requiredType == Long.class) {
                 return (T) jdbcTemplate.queryForObject(sql, (rs, rowNum) -> rs.getLong(1));
             }
             return jdbcTemplate.queryForObject(sql, new BeanPropertyRowMapper<>(requiredType));
         } catch (Exception e) {
-            log.severe("Error executing queryForObject: " + e.getMessage());
+           log.error("Error executing queryForObject: " + e.getMessage());
             e.printStackTrace();
             return null;
         }
