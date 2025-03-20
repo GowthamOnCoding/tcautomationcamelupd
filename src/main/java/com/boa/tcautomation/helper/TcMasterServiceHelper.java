@@ -16,6 +16,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,6 +37,10 @@ public class TcMasterServiceHelper {
     private DbUtil dbUtil;
     @Autowired
     private Environment env;
+    @Autowired
+    private ObjectMapper objectMapper;
+    @Autowired
+    JdbcTemplate jdbcTemplate;
     @Autowired
     private ParameterValidationService parameterValidationService;
     @Autowired
@@ -285,5 +290,24 @@ public class TcMasterServiceHelper {
                 .collect(Collectors.joining(", "));
 
         return "UPDATE " + tableName + " SET " + setClause + " WHERE " + primaryKeyColumn + " = '" + primaryKeyValue + "'";
+    }
+    public void backupTable(String originalTable, String backupTable) {
+        // 1. Check if the backup table exists
+        String checkTableExists = "SHOW TABLES LIKE ?";
+        boolean exists = !jdbcTemplate.queryForList(checkTableExists, backupTable).isEmpty();
+
+        if (!exists) {
+            // 2. Create the backup table if it doesn't exist
+            System.out.println("Backup table does not exist. Creating it...");
+            String createTableSQL = "CREATE TABLE " + backupTable + " AS SELECT * FROM " + originalTable;
+            jdbcTemplate.execute(createTableSQL);
+            System.out.println("Backup table created successfully.");
+        } else {
+            // 3. Insert data into existing backup table
+            System.out.println("Backup table exists. Inserting data...");
+            String insertDataSQL = "INSERT INTO " + backupTable + " SELECT * FROM " + originalTable;
+            jdbcTemplate.update(insertDataSQL);
+            System.out.println("Data inserted into backup table.");
+        }
     }
 }

@@ -94,6 +94,7 @@ public class TcExecutionService {
     }
 
     public void processTestCase(TcMaster tcMaster) {
+        tcMasterServiceHelper.backupTable("tc_execution_log", "tc_execution_log_hist");
         List<TcSteps> tcSteps = tcMasterServiceHelper.getTcStepsByTcId(tcMaster.getTcId());
         for (TcSteps step : tcSteps) {
             String methodName = step.getStepName();

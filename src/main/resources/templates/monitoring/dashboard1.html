@@ -21,7 +21,7 @@
 
         <!-- Host Selection -->
         <div class="mb-8">
-            <select id="hostSelect" class="glass-card w-full p-2 border rounded-lg">
+            <select id="hostSelect" class="glass-card w-64 p-2 border rounded-lg">
                 <option value="">Select a host...</option>
                 <option th:each="host : ${hosts}"
                         th:value="${host.hostName}"
@@ -30,16 +30,16 @@
             </select>
         </div>
 
-        <!-- System Metrics Cards -->
-        <div class="grid md:grid-cols-3 gap-6 mb-8">
+        <!-- System Metrics Cards and Start TCA Button -->
+        <div class="grid md:grid-cols-4 gap-6 mb-8">
             <!-- CPU Usage -->
-            <div class="glass-card p-6 rounded-xl">
-                <div class="bg-blue-100 p-4 rounded-full mb-4 mx-auto w-16 h-16 flex items-center justify-center">
-                    <i class="fas fa-microchip text-2xl text-blue-600"></i>
+            <div class="glass-card p-4 rounded-xl">
+                <div class="bg-blue-100 p-3 rounded-full mb-3 mx-auto w-12 h-12 flex items-center justify-center">
+                    <i class="fas fa-microchip text-xl text-blue-600"></i>
                 </div>
-                <h3 class="font-semibold text-lg mb-2 text-blue-600">CPU Usage</h3>
+                <h3 class="font-semibold text-md mb-2 text-blue-600">CPU Usage</h3>
                 <div class="text-center">
-                    <span id="cpuUsage" class="text-3xl font-bold">-</span>
+                    <span id="cpuUsage" class="text-2xl font-bold">-</span>
                     <span class="text-gray-600">%</span>
                 </div>
                 <div class="text-sm text-gray-600 mt-2">
@@ -47,21 +47,21 @@
                     <div>System: <span id="cpuSystem">-</span>%</div>
                     <div>Idle: <span id="cpuIdle">-</span>%</div>
                 </div>
-                <div class="mt-4">
-                    <div class="w-full bg-gray-200 rounded-full h-2.5">
-                        <div id="cpuProgressBar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+                <div class="mt-3">
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div id="cpuProgressBar" class="bg-blue-600 h-2 rounded-full" style="width: 0%"></div>
                     </div>
                 </div>
             </div>
 
             <!-- Memory Usage -->
-            <div class="glass-card p-6 rounded-xl">
-                <div class="bg-green-100 p-4 rounded-full mb-4 mx-auto w-16 h-16 flex items-center justify-center">
-                    <i class="fas fa-memory text-2xl text-green-600"></i>
+            <div class="glass-card p-4 rounded-xl">
+                <div class="bg-green-100 p-3 rounded-full mb-3 mx-auto w-12 h-12 flex items-center justify-center">
+                    <i class="fas fa-memory text-xl text-green-600"></i>
                 </div>
-                <h3 class="font-semibold text-lg mb-2 text-green-600">Memory Usage</h3>
+                <h3 class="font-semibold text-md mb-2 text-green-600">Memory Usage</h3>
                 <div class="text-center">
-                    <span id="memoryUsage" class="text-3xl font-bold">-</span>
+                    <span id="memoryUsage" class="text-2xl font-bold">-</span>
                     <span class="text-gray-600">MB</span>
                 </div>
                 <div class="text-sm text-gray-600 mt-2">
@@ -69,22 +69,30 @@
                     <div>Used: <span id="memoryUsed">-</span> MB</div>
                     <div>Free: <span id="memoryFree">-</span> MB</div>
                 </div>
-                <div class="mt-4">
-                    <div class="w-full bg-gray-200 rounded-full h-2.5">
-                        <div id="memoryProgressBar" class="bg-green-600 h-2.5 rounded-full" style="width: 0%"></div>
+                <div class="mt-3">
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div id="memoryProgressBar" class="bg-green-600 h-2 rounded-full" style="width: 0%"></div>
                     </div>
                 </div>
             </div>
 
             <!-- Disk Usage -->
-            <div class="glass-card p-6 rounded-xl">
-                <div class="bg-purple-100 p-4 rounded-full mb-4 mx-auto w-16 h-16 flex items-center justify-center">
-                    <i class="fas fa-hard-drive text-2xl text-purple-600"></i>
+            <div class="glass-card p-4 rounded-xl">
+                <div class="bg-purple-100 p-3 rounded-full mb-3 mx-auto w-12 h-12 flex items-center justify-center">
+                    <i class="fas fa-hard-drive text-xl text-purple-600"></i>
                 </div>
-                <h3 class="font-semibold text-lg mb-2 text-purple-600">Disk Usage</h3>
+                <h3 class="font-semibold text-md mb-2 text-purple-600">Disk Usage</h3>
                 <div id="diskUsage" class="text-sm text-gray-600">
                     <!-- Disk usage will be populated dynamically -->
                 </div>
+            </div>
+
+            <!-- Start TCA Button -->
+            <div class="glass-card p-4 rounded-xl flex items-center justify-center">
+                <button id="startTCA" class="btn glass-card px-4 py-2 rounded-lg text-blue-600 hover:text-blue-800 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg flex items-center gap-2">
+                    <i class="fas fa-shield-alt"></i>
+                    <span class="tracking-tight">Start TCA</span>
+                </button>
             </div>
         </div>
 
@@ -444,6 +452,27 @@
             }, 5000);
         }
 
+        // Show Success Alert
+        function showSuccessAlert(message) {
+            const alertHtml = `
+                <div class="fixed top-4 right-4 glass-card p-4 border-l-4 border-green-600 animate__animated animate__fadeIn z-50">
+                    <div class="flex items-center">
+                        <i class="fas fa-check-circle text-green-600 mr-2"></i>
+                        <span>${message}</span>
+                        <button class="ml-4 text-gray-500 hover:text-gray-700" onclick="$(this).parent().parent().remove()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            $('body').append(alertHtml);
+
+            // Auto-remove after 5 seconds
+            setTimeout(function() {
+                $('.fixed.glass-card').first().remove();
+            }, 5000);
+        }
+
         // Kill Process
         window.killProcess = function(pid) {
             const host = $('#hostSelect').val();
@@ -496,6 +525,32 @@
             }
         }
 
+        // TCA Button Handler
+        $('#startTCA').click(function() {
+            const host = $('#hostSelect').val();
+            if (!host) {
+                showErrorAlert("Please select a host first!");
+                return;
+            }
+
+            $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Starting...');
+
+            $.ajax({
+                url: '/tca/invoke',
+                type: 'POST',
+                data: { host: host },
+                success: function(response) {
+                    showSuccessAlert("TCA process started successfully");
+                },
+                error: function() {
+                    showErrorAlert("Error starting TCA process!");
+                },
+                complete: function() {
+                    $('#startTCA').prop('disabled', false).html('<i class="fas fa-shield-alt"></i> <span class="tracking-tight">Start TCA</span>');
+                }
+            });
+        });
+
         // Allow Enter key to execute command
         $('#commandInput').on('keypress', function(e) {
             if (e.which === 13 && !e.shiftKey) {
@@ -506,4 +561,4 @@
     });
 </script>
 </body>
-</html><!DOCTYPE html>
+</html>
