@@ -40,7 +40,8 @@ public class ServerMonitorRoutes extends RouteBuilder {
                 .get().to("direct:getHosts")
                 .get("/{hostName}").to("direct:getHost")
                 .get("/category/{category}").to("direct:getHostsByCategory");
-
+        rest("/tca")
+                .get("/invoke").to("direct:queryTcMaster");
         // Monitoring endpoints
         rest("/monitor")
                 .get("/system/{hostName}").to("direct:getSystemInfo")
