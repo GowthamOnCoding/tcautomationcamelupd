@@ -234,32 +234,7 @@ public class TcExecutionService {
         }
     }
 /*
-[
-    {
-        "event": "metadata",
-        "status": "Completed",
-        "startTime": "2023-10-01T10:00:00",
-        "lastUpdated": "2023-10-01T10:15:00",
-        "aitNo": "SDD_AIT_12345",
-        "configId": "config_001"
-    },
-    {
-        "event": "producer",
-        "status": "Partially Processed",
-        "startTime": "2023-10-01T10:00:00",
-        "lastUpdated": "2023-10-01T10:15:00",
-        "aitNo": "AIT_67890",
-        "configId": "config_002"
-    },
-    {
-        "event": "consumer",
-        "status": "Completed",
-        "startTime": "2023-10-01T10:00:00",
-        "lastUpdated": "2023-10-01T10:15:00",
-        "aitNo": "AIT_54321",
-        "configId": "config_003"
-    }
-]
+[{"event":"metadata","status":"Completed","startTime":"2023-10-01T10:00:00","lastUpdated":"2023-10-01T10:15:00","aitNo":"SDD_AIT_12345","configId":"config_001"},{"event":"producer","status":"Partially Processed","startTime":"2023-10-01T10:00:00","lastUpdated":"2023-10-01T10:15:00","aitNo":"AIT_67890","configId":"config_002"},{"event":"consumer","status":"Completed","startTime":"2023-10-01T10:00:00","lastUpdated":"2023-10-01T10:15:00","aitNo":"AIT_54321","configId":"config_003"}]
 {"$schema":"http://json-schema.org/draft-07/schema#","type":"array","items":{"type":"object","properties":{"event":{"type":"string"},"status":{"type":"string"},"startTime":{"type":"string","format":"date-time"},"lastUpdated":{"type":"string","format":"date-time"},"aitNo":{"type":"string"},"configId":{"type":"string"}},"required":["event","status","startTime","lastUpdated","aitNo","configId"]}}
  */
     public void insertKafkaStatEntries(TcMaster tcMaster, TcSteps tcStep) {
