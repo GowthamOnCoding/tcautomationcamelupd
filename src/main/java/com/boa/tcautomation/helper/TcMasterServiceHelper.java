@@ -9,7 +9,11 @@ import com.boa.tcautomation.util.DbUtil;
 import com.boa.tcautomation.util.QueryConstants;
 import com.boa.tcautomation.validator.ParameterValidationService;
 import static com.boa.tcautomation.util.QueryConstants.DELETE_KAFKA_STAT;
+
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
@@ -82,15 +86,36 @@ public class TcMasterServiceHelper {
         try {
             String parameters = step.getParameters();
             log.info("Parameters: {}", parameters);
+
             String sql = QueryConstants.SELECT_STEP_CONFIG_BY_STEP_NAME.replace("<STEP_NAME>", step.getStepName());
             StepConfig stepConfig = executeQuery(sql, StepConfig.class);
             log.info("StepConfig: {}", stepConfig);
+
             if (stepConfig.getParameterSchema() != null && !stepConfig.getParameterSchema().isEmpty()) {
                 ParameterSchema parameterSchema = getParameterSchema(stepConfig.getParameterSchema());
-                Map<String, String> parametersMap = new ObjectMapper().readValue(parameters, Map.class);
-                parameterValidationService.validateParameters(step.getStepName(), parametersMap);
+
+                ObjectMapper objectMapper = new ObjectMapper();
+                objectMapper.registerModule(new JavaTimeModule());
+                JsonNode jsonNode = objectMapper.readTree(parameters);
+
+                if (jsonNode.isObject()) {
+                    // If the parameters are a JSON object, convert to Map
+                    Map<String, String> parametersMap = objectMapper.convertValue(jsonNode, Map.class);
+                    parameterValidationService.validateParameters(step.getStepName(), parametersMap);
+                } else if (jsonNode.isArray()) {
+                    // If the parameters are a JSON array, convert to List
+                    List<Map<String, Object>> paramList = objectMapper.readValue(parameters, new TypeReference<List<Map<String, Object>>>() {});
+                    for (Map<String, Object> param : paramList) {
+                        // You can add custom validation logic for each entry
+                        parameterValidationService.validateParameters(step.getStepName(), param);
+                    }
+                } else {
+                    throw new RuntimeException("Unexpected JSON format.");
+                }
             }
+
             return true;
+
         } catch (Exception e) {
             log.error("Error getting and validating StepConfig: {}", e.getMessage());
             return false;

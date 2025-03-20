@@ -8,6 +8,7 @@ import com.boa.tcautomation.model.ParameterSchema;
 import com.boa.tcautomation.repository.ParameterSchemaRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.github.fge.jackson.JsonLoader;
 import com.github.fge.jsonschema.core.report.ProcessingReport;
 import com.github.fge.jsonschema.main.JsonSchema;
@@ -33,7 +34,7 @@ public class ParameterValidationService {
         this.schemaRepository = schemaRepository;
     }
 
-    public void validateParameters(String stepName, Map<String, String> parameters) {
+    public void validateParameters1(String stepName, Map<String, String> parameters) {
         List<ParameterSchema> schemas = schemaRepository.findActiveSchemasByStepName(stepName);
         List<ValidationError> errors = new ArrayList<>();
 
@@ -53,6 +54,54 @@ public class ParameterValidationService {
 
         if (!errors.isEmpty()) {
             throw new ParameterValidationException(stepName, errors);
+        }
+    }
+    public void validateParameters(String stepName, Object parameters) {
+        List<ParameterSchema> schemas = schemaRepository.findActiveSchemasByStepName(stepName);
+        List<ValidationError> errors = new ArrayList<>();
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+
+        try {
+            JsonNode parametersNode;
+
+            if (parameters instanceof Map) {
+                // Single object (Map) validation
+                parametersNode = objectMapper.valueToTree(parameters);
+                validateAgainstSchemas(schemas, parametersNode, errors);
+            } else if (parameters instanceof List) {
+                // List of objects validation
+                List<Map<String, Object>> paramList = (List<Map<String, Object>>) parameters;
+
+                for (Map<String, Object> param : paramList) {
+                    parametersNode = objectMapper.valueToTree(param);
+                    validateAgainstSchemas(schemas, parametersNode, errors);
+                }
+            } else {
+                throw new IllegalArgumentException("Unsupported parameter type: " + parameters.getClass().getName());
+            }
+
+        } catch (Exception e) {
+            errors.add(new ValidationError("UNKNOWN_SCHEMA", e.getMessage()));
+        }
+
+        if (!errors.isEmpty()) {
+            throw new ParameterValidationException(stepName, errors);
+        }
+    }
+
+    private void validateAgainstSchemas(List<ParameterSchema> schemas, JsonNode parametersNode, List<ValidationError> errors) {
+        for (ParameterSchema schema : schemas) {
+            try {
+                JsonSchema jsonSchema = getOrCreateSchema(schema);
+                ProcessingReport report = jsonSchema.validate(parametersNode);
+
+                if (!report.isSuccess()) {
+                    errors.add(new ValidationError(schema.getSchemaId(), report));
+                }
+            } catch (Exception e) {
+                errors.add(new ValidationError(schema.getSchemaId(), e.getMessage()));
+            }
         }
     }
 

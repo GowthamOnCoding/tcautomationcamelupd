@@ -11,7 +11,9 @@ import com.boa.tcautomation.util.DbUtil;
 import com.boa.tcautomation.util.SshUtil;
 import com.boa.tcautomation.validator.ParameterValidationService;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +26,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -237,23 +240,43 @@ public class TcExecutionService {
 [{"event":"metadata","status":"Completed","startTime":"2023-10-01T10:00:00","lastUpdated":"2023-10-01T10:15:00","aitNo":"SDD_AIT_12345","configId":"config_001"},{"event":"producer","status":"Partially Processed","startTime":"2023-10-01T10:00:00","lastUpdated":"2023-10-01T10:15:00","aitNo":"AIT_67890","configId":"config_002"},{"event":"consumer","status":"Completed","startTime":"2023-10-01T10:00:00","lastUpdated":"2023-10-01T10:15:00","aitNo":"AIT_54321","configId":"config_003"}]
 {"$schema":"http://json-schema.org/draft-07/schema#","type":"array","items":{"type":"object","properties":{"event":{"type":"string"},"status":{"type":"string"},"startTime":{"type":"string","format":"date-time"},"lastUpdated":{"type":"string","format":"date-time"},"aitNo":{"type":"string"},"configId":{"type":"string"}},"required":["event","status","startTime","lastUpdated","aitNo","configId"]}}
  */
+
+;
+
     public void insertKafkaStatEntries(TcMaster tcMaster, TcSteps tcStep) {
         log.info("{}#{} updating TC_Execution log to In Progress", tcMaster.getTcId(), tcStep.getStepId());
         long tcExecId = tcMasterServiceHelper.insertLogEntry(tcMaster.getTcId(), tcStep.getStepId(), Constants.INPROGRESS);
-        log.info("{}#{} inserting entries into Kafka Stat Table", tcMaster.getTcId(), tcStep.getStepId());
 
         try {
             if (tcMasterServiceHelper.getAndValidateParametersSchema(tcStep)) {
-                // Parse the parameters
-                ObjectMapper objectMapper = new ObjectMapper();
-                List<KafkaStatEntry> kafkaStatEntries = objectMapper.readValue(tcStep.getParameters(), new TypeReference<List<KafkaStatEntry>>() {});
 
+                ObjectMapper objectMapper = new ObjectMapper();
+                objectMapper.registerModule(new JavaTimeModule());
+
+                // Handle both array and single object dynamically
+                JsonNode jsonNode = objectMapper.readTree(tcStep.getParameters());
+
+                List<KafkaStatEntry> kafkaStatEntries = new ArrayList<>();
+
+                if (jsonNode.isArray()) {
+                    // Deserialize as a list
+                    kafkaStatEntries = objectMapper.readValue(tcStep.getParameters(), new TypeReference<List<KafkaStatEntry>>() {});
+                } else if (jsonNode.isObject()) {
+                    // Deserialize single object into a list
+                    KafkaStatEntry entry = objectMapper.treeToValue(jsonNode, KafkaStatEntry.class);
+                    kafkaStatEntries.add(entry);
+                } else {
+                    throw new RuntimeException("Invalid JSON format: expected array or object.");
+                }
+
+                // Insert each entry
                 for (KafkaStatEntry entry : kafkaStatEntries) {
                     insertKafkaStatEntry(entry, tcMaster.getAitNo());
                 }
 
                 log.info("{}#{} updating TC_Execution log to Completed", tcMaster.getTcId(), tcStep.getStepId());
                 tcMasterServiceHelper.updateLogEntry(tcExecId, Constants.COMPLETED, "");
+
             } else {
                 log.info("{}#{} updating TC_Execution log to Failed", tcMaster.getTcId(), tcStep.getStepId());
                 tcMasterServiceHelper.updateLogEntry(tcExecId, Constants.FAILED, "");
@@ -265,10 +288,11 @@ public class TcExecutionService {
             throw new RuntimeException("Error inserting Kafka Stat entries: " + e.getMessage(), e);
         }
     }
+
     private void insertKafkaStatEntry(KafkaStatEntry entry, String aitNo) {
         // Validate ait_number and config_id combination
         aitNo = aitNo.replaceFirst("^(SDD_AIT_|AIT_)", "");
-        String validateQuery = "SELECT COUNT(*) FROM ait_dbprop WHERE ait_no = :aitNo AND config_id = :configId";
+        String validateQuery = "SELECT COUNT(*) FROM ait_dbprop WHERE ait_no = :aitNo AND id = :configId";
         MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue("aitNo", aitNo)
                 .addValue("configId", entry.getConfigId());

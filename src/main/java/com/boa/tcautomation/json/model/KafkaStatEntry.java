@@ -1,18 +1,21 @@
 
 package com.boa.tcautomation.json.model;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
 import java.time.LocalDateTime;
 
 @Data
 public class KafkaStatEntry {
-    private String aitNo;
-    private String configId;
     private String event;
     private String status;
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime startTime;
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime lastUpdated;
+    private String aitNo;
+    private String configId;
 
     public String getAitNo() {
         return aitNo;
