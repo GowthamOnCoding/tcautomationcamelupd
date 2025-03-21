@@ -536,7 +536,7 @@
             $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Starting...');
 
             $.ajax({
-                url: '/tca/invoke',
+                url: 'api/tca/invoke',
                 type: 'POST',
                 data: { host: host },
                 success: function(response) {
