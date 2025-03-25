@@ -50,7 +50,7 @@ public class TcStepsController {
         // Fetch and add the step to edit
         //TcSteps tcStep = testManagementService.getTestCaseStepById(id);
        // model.addAttribute("tcSteps", tcStep);
-        return "tcsteps/edit";
+        return "tcsteps/add";
     }
 
     @PostMapping("/tcsteps/save")
