@@ -16,7 +16,7 @@
             </h1>
         </div>
 
-        <form th:action="@{/tcsteps/save}" th:object="${tcSteps}" method="post" class="space-y-6">
+        <form th:action="@{/tcsteps/save}" th:object="${tcSteps}" method="post" class="space-y-6" id="stepForm">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <!-- Auto-generated Step ID (Display Only) -->
                 <div class="form-group">
@@ -76,15 +76,17 @@
                     </select>
                 </div>
 
-                <!-- Parameters (JSON) -->
+                <!-- Dynamic Parameters Section -->
                 <div class="form-group md:col-span-2">
-                    <label for="parameters" class="block text-sm font-medium text-gray-700 mb-1">Parameters (JSON)</label>
-                    <textarea id="parameters" th:field="*{parameters}" rows="5"
-                              class="glass-card w-full px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
-                              placeholder='{"key1":"value1", "key2":"value2"}'></textarea>
-                    <small class="text-gray-500 text-xs">Enter valid JSON format parameters</small>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Parameters</label>
+                    <div id="dynamicParameters" class="space-y-4">
+                        <!-- Fields will be generated here by JavaScript -->
+                    </div>
+                    <!-- Hidden field to store the final JSON -->
+                    <input type="hidden" id="parameters" th:field="*{parameters}" name="parameters" />
+                    <small class="text-gray-500 text-xs">Parameters will be generated based on the selected step</small>
                     <p class="mt-1 text-sm text-red-600" th:if="${#fields.hasErrors('parameters')}"
-                       th:errors="*{parameters}">Invalid JSON format</p>
+                       th:errors="*{parameters}">Invalid parameters format</p>
                 </div>
             </div>
 
@@ -109,70 +111,185 @@
 <!-- Scripts -->
 <div th:replace="~{fragments :: scripts}"></div>
 
-<!-- JSON Handling Script -->
+<!-- Dynamic Parameters Script -->
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // JSON formatting and preview
-        const jsonTextarea = document.getElementById('parameters');
-        const previewDiv = document.createElement('div');
-        previewDiv.className = 'mt-2 p-3 bg-gray-50/50 rounded-lg hidden';
-        previewDiv.innerHTML = '<h4 class="text-sm font-medium text-gray-700 mb-1">JSON Preview</h4><pre class="json-preview bg-white/50 p-2 rounded overflow-auto max-h-40"></pre>';
-        jsonTextarea.parentNode.appendChild(previewDiv);
+        const stepNameSelect = document.getElementById('stepName');
+        const dynamicParametersDiv = document.getElementById('dynamicParameters');
+        const parametersHiddenInput = document.getElementById('parameters');
+        const form = document.getElementById('stepForm');
 
-        // Format JSON on blur
-        jsonTextarea.addEventListener('blur', function() {
-            try {
-                if (this.value.trim()) {
-                    const jsonObj = JSON.parse(this.value);
-                    this.value = JSON.stringify(jsonObj, null, 2);
-                }
-            } catch (e) {
-                // Don't reformat if invalid JSON
+        // Initialize with empty parameters
+        parametersHiddenInput.value = '{}';
+
+        stepNameSelect.addEventListener('change', function() {
+            const selectedStep = this.value;
+            if (selectedStep) {
+                fetchSchemaForStep(selectedStep);
+            } else {
+                clearParameterFields();
             }
         });
 
-        // Toggle preview on focus/blur
-        jsonTextarea.addEventListener('focus', function() {
-            previewDiv.classList.remove('hidden');
-            updatePreview();
-        });
-
-        jsonTextarea.addEventListener('blur', function() {
-            previewDiv.classList.add('hidden');
-        });
-
-        // Update preview on input
-        jsonTextarea.addEventListener('input', updatePreview);
-
-        function updatePreview() {
-            const preview = previewDiv.querySelector('.json-preview');
-            preview.innerHTML = syntaxHighlight(jsonTextarea.value);
+        function fetchSchemaForStep(stepName) {
+            fetch(`/step-schemas/${encodeURIComponent(stepName)}`)
+                .then(response => {
+                    if (!response.ok) throw new Error('Schema not found');
+                    return response.json();
+                })
+                .then(schema => {
+                    generateParameterFields(schema);
+                })
+                .catch(error => {
+                    console.error('Error fetching step schema:', error);
+                    clearParameterFields();
+                });
         }
 
-        function syntaxHighlight(json) {
-            if (!json) return '';
-            try {
-                json = JSON.stringify(JSON.parse(json), null, 2);
-            } catch (e) {
-                return json; // Return original if invalid JSON
-            }
+        function generateParameterFields(schema) {
+            clearParameterFields();
 
-            return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
-                function(match) {
-                    let cls = 'text-gray-600';
-                    if (/^"/.test(match)) {
-                        if (/:$/.test(match)) {
-                            cls = 'text-purple-600';
-                        } else {
-                            cls = 'text-green-600';
-                        }
-                    } else if (/true|false/.test(match)) {
-                        cls = 'text-blue-600';
-                    } else if (/null/.test(match)) {
-                        cls = 'text-red-600';
+            try {
+                const schemaDef = JSON.parse(schema.schemaDefinition);
+                if (!schemaDef.properties) return;
+
+                Object.entries(schemaDef.properties).forEach(([paramName, paramDef]) => {
+                    const fieldGroup = document.createElement('div');
+                    fieldGroup.className = 'glass-card p-4 rounded-lg mb-3';
+
+                    const label = document.createElement('label');
+                    label.className = 'block text-sm font-medium text-gray-700 mb-1';
+                    label.textContent = paramName;
+                    if (schemaDef.required && schemaDef.required.includes(paramName)) {
+                        label.textContent += ' *';
+                        label.innerHTML += '<span class="text-red-500"> (required)</span>';
                     }
-                    return '<span class="' + cls + '">' + match + '</span>';
+
+                    let input;
+                    const inputId = `param_${paramName}`;
+
+                    if (paramDef.type === 'string' && paramDef.pattern) {
+                        input = document.createElement('input');
+                        input.type = 'text';
+                        input.pattern = paramDef.pattern;
+                        input.title = paramDef.description || `Must match pattern: ${paramDef.pattern}`;
+                    } else if (paramDef.type === 'string' && (paramDef.format === 'textarea' || (paramDef.maxLength && paramDef.maxLength > 100))) {
+                        input = document.createElement('textarea');
+                        input.rows = 3;
+                        if (paramDef.maxLength) {
+                            input.maxLength = paramDef.maxLength;
+                        }
+                    } else {
+                        input = document.createElement('input');
+                        input.type = mapSchemaTypeToInputType(paramDef.type);
+                    }
+
+                    input.className = 'glass-card w-full px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500';
+                    input.id = inputId;
+                    input.name = inputId;
+                    input.placeholder = paramDef.description || paramName;
+
+                    if (paramDef.default) {
+                        input.value = paramDef.default;
+                    }
+
+                    // Add description as help text if available
+                    if (paramDef.description) {
+                        const helpText = document.createElement('p');
+                        helpText.className = 'text-xs text-gray-500 mt-1';
+                        helpText.textContent = paramDef.description;
+                        fieldGroup.appendChild(helpText);
+                    }
+
+                    fieldGroup.prepend(label);
+                    fieldGroup.appendChild(input);
+                    dynamicParametersDiv.appendChild(fieldGroup);
                 });
+
+                // Update parameters when form is submitted
+                form.addEventListener('submit', function(e) {
+                    updateParametersJson();
+                    if (!validateParameters()) {
+                        e.preventDefault();
+                    }
+                });
+
+                // Update parameters on input change
+                dynamicParametersDiv.querySelectorAll('input, textarea, select').forEach(input => {
+                    input.addEventListener('change', updateParametersJson);
+                    input.addEventListener('input', updateParametersJson);
+                });
+
+            } catch (e) {
+                console.error('Error parsing schema:', e);
+                clearParameterFields();
+            }
+        }
+
+        function mapSchemaTypeToInputType(schemaType) {
+            const typeMap = {
+                'string': 'text',
+                'number': 'number',
+                'integer': 'number',
+                'boolean': 'checkbox',
+                'date': 'date',
+                'datetime': 'datetime-local',
+                'email': 'email',
+                'password': 'password'
+            };
+            return typeMap[schemaType] || 'text';
+        }
+
+        function clearParameterFields() {
+            dynamicParametersDiv.innerHTML = '';
+            parametersHiddenInput.value = '{}';
+        }
+
+        function updateParametersJson() {
+            const params = {};
+
+            dynamicParametersDiv.querySelectorAll('input, textarea, select').forEach(input => {
+                const paramName = input.id.replace('param_', '');
+                let value;
+
+                if (input.type === 'checkbox') {
+                    value = input.checked;
+                } else if (input.type === 'number') {
+                    value = input.value ? parseFloat(input.value) : null;
+                } else {
+                    value = input.value;
+                }
+
+                // Only include if value exists or it's a boolean
+                if (value !== '' && value !== null && value !== undefined) {
+                    params[paramName] = value;
+                }
+            });
+
+            parametersHiddenInput.value = JSON.stringify(params);
+        }
+
+        function validateParameters() {
+            let isValid = true;
+
+            dynamicParametersDiv.querySelectorAll('input, textarea, select').forEach(input => {
+                if (input.required && !input.value) {
+                    input.classList.add('border-red-500');
+                    isValid = false;
+                } else {
+                    input.classList.remove('border-red-500');
+                }
+
+                if (input.pattern) {
+                    const regex = new RegExp(input.pattern);
+                    if (!regex.test(input.value)) {
+                        input.classList.add('border-red-500');
+                        isValid = false;
+                    }
+                }
+            });
+
+            return isValid;
         }
     });
 </script>

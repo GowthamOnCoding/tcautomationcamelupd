@@ -17,7 +17,7 @@
             <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-red-600 bg-clip-text text-transparent tracking-tight">Edit Test Case Step</h1>
         </div>
 
-        <form th:object="${tcSteps}" th:action="@{/tcsteps/save}" method="post" class="space-y-6">
+        <form th:object="${tcSteps}" th:action="@{/tcsteps/save}" method="post" class="space-y-6" id="stepForm">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
                 <!-- Step ID (Uneditable Text Box) -->
@@ -44,11 +44,15 @@
                     <small class="text-red-500 text-xs mt-1" th:if="${#fields.hasErrors('stepName')}" th:errors="*{stepName}"></small>
                 </div>
 
-                <!-- Parameters -->
+                <!-- Dynamic Parameters Section -->
                 <div class="form-group md:col-span-2">
-                    <label for="parameters" class="block text-sm font-medium text-gray-700 mb-2">Parameters</label>
-                    <textarea id="parameters" th:field="*{parameters}" rows="5"
-                              class="glass-card w-full px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"></textarea>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Parameters</label>
+                    <div id="dynamicParameters" class="space-y-4">
+                        <!-- Fields will be generated here by JavaScript -->
+                    </div>
+                    <!-- Hidden field to store the final JSON -->
+                    <input type="hidden" id="parameters" th:field="*{parameters}" name="parameters" />
+                    <small class="text-gray-500 text-xs">Parameters will be generated based on the step schema</small>
                     <small class="text-red-500 text-xs mt-1" th:if="${#fields.hasErrors('parameters')}" th:errors="*{parameters}"></small>
                 </div>
 
@@ -99,10 +103,290 @@
 
 <script>
     $(document).ready(function () {
-        $('.select2').select2({
-            placeholder: 'Select an option',
-            allowClear: true
-        });
+        // Check if Select2 is available before trying to use it
+        if (typeof $.fn.select2 === 'function') {
+            $('.select2').select2({
+                placeholder: 'Select an option',
+                allowClear: true
+            });
+        } else {
+            console.warn("Select2 plugin not loaded - enhanced dropdowns will not be available");
+        }
+
+        // Initialize dynamic parameters
+        initializeParameters();
+
+        function initializeParameters() {
+            const stepName = $('#stepName').val();
+            console.log("Step Name:", stepName); // Debug
+
+            if (!stepName || stepName.trim() === '') {
+                console.error("Step name is empty or undefined");
+                return;
+            }
+
+            // Parse existing parameters, with error handling
+            let existingParams = {};
+            try {
+                const paramsValue = $('#parameters').val();
+                console.log("Raw parameters value:", paramsValue); // Debug
+
+                if (paramsValue && paramsValue.trim() !== '') {
+                    existingParams = JSON.parse(paramsValue);
+                }
+            } catch (e) {
+                console.error("Error parsing parameters JSON:", e);
+            }
+
+            console.log("Fetching schema for:", stepName);
+            console.log("Existing parameters:", existingParams);
+
+            fetchSchemaAndGenerateFields(stepName, existingParams);
+        }
+
+        function fetchSchemaAndGenerateFields(stepName, existingParams) {
+            const apiUrl = `/step-schemas/${encodeURIComponent(stepName)}`;
+            console.log("Fetching schema from:", apiUrl);
+
+            fetch(apiUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        console.error(`Schema API returned status: ${response.status}`);
+                        throw new Error('Schema not found');
+                    }
+                    return response.json();
+                })
+                .then(schema => {
+                    console.log("Schema received:", schema);
+                    generateParameterFields(schema, existingParams);
+                })
+                .catch(error => {
+                    console.error('Error fetching step schema:', error);
+                    // Fallback to textarea if schema not found
+                    createFallbackTextarea(existingParams);
+                });
+        }
+
+        function generateParameterFields(schema, existingParams) {
+            const dynamicParametersDiv = $('#dynamicParameters');
+            dynamicParametersDiv.empty();
+
+            try {
+                let schemaDef;
+
+                // Handle both string and object schema definitions
+                if (typeof schema.schemaDefinition === 'string') {
+                    schemaDef = JSON.parse(schema.schemaDefinition);
+                } else {
+                    schemaDef = schema.schemaDefinition;
+                }
+
+                console.log("Parsed schema definition:", schemaDef);
+
+                if (!schemaDef || !schemaDef.properties) {
+                    console.error("Invalid schema definition - missing properties");
+                    createFallbackTextarea(existingParams);
+                    return;
+                }
+
+                Object.entries(schemaDef.properties).forEach(([paramName, paramDef]) => {
+                    const fieldGroup = $('<div>').addClass('glass-card p-4 rounded-lg mb-3');
+
+                    const label = $('<label>')
+                        .addClass('block text-sm font-medium text-gray-700 mb-1')
+                        .text(paramName);
+
+                    if (schemaDef.required && schemaDef.required.includes(paramName)) {
+                        label.append('<span class="text-red-500"> *</span>');
+                    }
+
+                    let input;
+                    const inputId = `param_${paramName}`;
+                    const existingValue = existingParams[paramName] !== undefined ? existingParams[paramName] :
+                                         (paramDef.default !== undefined ? paramDef.default : '');
+
+                    console.log(`Creating field for ${paramName}, existing value:`, existingValue);
+
+                    if (paramDef.enum) {
+                        // Create dropdown for enum values
+                        input = $('<select>');
+                        input.append($('<option>').attr('value', '').text('-- Select --'));
+
+                        paramDef.enum.forEach(option => {
+                            const optionElement = $('<option>')
+                                .attr('value', option)
+                                .text(option);
+
+                            if (existingValue === option) {
+                                optionElement.prop('selected', true);
+                            }
+
+                            input.append(optionElement);
+                        });
+                    } else if (paramDef.type === 'string' && paramDef.pattern) {
+                        input = $('<input>')
+                            .attr('type', 'text')
+                            .attr('pattern', paramDef.pattern)
+                            .attr('title', paramDef.description || `Must match pattern: ${paramDef.pattern}`);
+                    } else if (paramDef.type === 'string' && (paramDef.format === 'textarea' || (paramDef.maxLength && paramDef.maxLength > 100))) {
+                        input = $('<textarea>').attr('rows', 3);
+                        if (paramDef.maxLength) {
+                            input.attr('maxLength', paramDef.maxLength);
+                        }
+                    } else if (paramDef.type === 'boolean') {
+                        input = $('<input>').attr('type', 'checkbox');
+
+                        if (existingValue === true) {
+                            input.prop('checked', true);
+                        }
+                    } else {
+                        input = $('<input>').attr('type', mapSchemaTypeToInputType(paramDef.type));
+                    }
+
+                    input.addClass('glass-card w-full px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500')
+                        .attr('id', inputId)
+                        .attr('name', inputId)
+                        .attr('placeholder', paramDef.description || paramName);
+
+                    // Set value for non-checkbox inputs
+                    if (paramDef.type !== 'boolean') {
+                        input.val(existingValue);
+                    }
+
+                    if (schemaDef.required && schemaDef.required.includes(paramName)) {
+                        input.prop('required', true);
+                    }
+
+                    // Add description as help text if available
+                    if (paramDef.description) {
+                        const helpText = $('<p>')
+                            .addClass('text-xs text-gray-500 mt-1')
+                            .text(paramDef.description);
+                        fieldGroup.append(label, input, helpText);
+                    } else {
+                        fieldGroup.append(label, input);
+                    }
+
+                    dynamicParametersDiv.append(fieldGroup);
+                });
+
+                // Remove previous event handlers to prevent duplicates
+                $('#stepForm').off('submit.params');
+
+                // Update parameters when form is submitted
+                $('#stepForm').on('submit.params', function(e) {
+                    updateParametersJson();
+                    if (!validateParameters()) {
+                        e.preventDefault();
+                    }
+                });
+
+                // Remove previous event handlers
+                dynamicParametersDiv.off('change.params input.params');
+
+                // Update parameters on input change
+                dynamicParametersDiv.on('change.params input.params', 'input, textarea, select', updateParametersJson);
+
+            } catch (e) {
+                console.error('Error parsing schema:', e);
+                console.error(e.stack);
+                createFallbackTextarea(existingParams);
+            }
+        }
+
+        function createFallbackTextarea(existingParams) {
+            console.log("Creating fallback textarea with params:", existingParams);
+            const dynamicParametersDiv = $('#dynamicParameters');
+            dynamicParametersDiv.empty();
+
+            const textarea = $('<textarea>')
+                .attr('id', 'parametersTextarea')
+                .attr('rows', 5)
+                .addClass('glass-card w-full px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm')
+                .val(JSON.stringify(existingParams, null, 2));
+
+            const helpText = $('<p>')
+                .addClass('text-xs text-gray-500 mt-1')
+                .text('Enter parameters in JSON format');
+
+            dynamicParametersDiv.append(textarea);
+            dynamicParametersDiv.append(helpText);
+
+            textarea.on('change input', function() {
+                try {
+                    const jsonValue = JSON.parse($(this).val());
+                    $('#parameters').val(JSON.stringify(jsonValue));
+                } catch (e) {
+                    // Ignore invalid JSON for now, validation will catch it
+                }
+            });
+        }
+
+        function mapSchemaTypeToInputType(schemaType) {
+            const typeMap = {
+                'string': 'text',
+                'number': 'number',
+                'integer': 'number',
+                'boolean': 'checkbox',
+                'date': 'date',
+                'datetime': 'datetime-local',
+                'email': 'email',
+                'password': 'password'
+            };
+            return typeMap[schemaType] || 'text';
+        }
+
+        function updateParametersJson() {
+            const params = {};
+
+            $('#dynamicParameters input, #dynamicParameters textarea, #dynamicParameters select').each(function() {
+                const input = $(this);
+                const paramName = input.attr('id').replace('param_', '');
+                let value;
+
+                if (input.attr('type') === 'checkbox') {
+                    value = input.prop('checked');
+                } else if (input.attr('type') === 'number') {
+                    value = input.val() ? parseFloat(input.val()) : null;
+                } else {
+                    value = input.val();
+                }
+
+                if (value !== '' && value !== null && value !== undefined) {
+                    params[paramName] = value;
+                }
+            });
+
+            console.log("Updated parameters:", params);
+            $('#parameters').val(JSON.stringify(params));
+        }
+
+        function validateParameters() {
+            let isValid = true;
+
+            $('#dynamicParameters input[required], #dynamicParameters textarea[required], #dynamicParameters select[required]').each(function() {
+                const input = $(this);
+                input.removeClass('border-red-500');
+
+                if (!input.val()) {
+                    input.addClass('border-red-500');
+                    isValid = false;
+                }
+            });
+
+            $('#dynamicParameters input[pattern]').each(function() {
+                const input = $(this);
+                if (input.val()) {
+                    const regex = new RegExp(input.attr('pattern'));
+                    if (!regex.test(input.val())) {
+                        input.addClass('border-red-500');
+                        isValid = false;
+                    }
+                }
+            });
+
+            return isValid;
+        }
     });
 </script>
 </body>

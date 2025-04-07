@@ -42,7 +42,6 @@ public class TcStepsController {
         model.addAttribute("tcSteps", new TcSteps());
         List<TcMaster> testCases = testManagementService.getAllTestCases();
         List<StepConfig> stepConfigs = testManagementService.getAllStepConfigs();
-
         // Add to model
         model.addAttribute("testCases", testCases);
         model.addAttribute("stepConfigs", stepConfigs);
