@@ -1,54 +1,236 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragments :: head}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Case Execution Monitoring</title>
+
+    <!-- Tailwind CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
+
     <style>
-        .json-key { color: #d14; }
+        .json-key { color: #d14; font-weight: bold; }
         .json-value { color: #099; }
         .json-string { color: #690; }
         .json-boolean { color: #f00; }
         .json-null { color: #f00; }
+        .json-number { color: #099; }
+
+        .status-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .status-success {
+            background-color: #dcfce7;
+            color: #166534;
+        }
+        .status-failure {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+        .status-running {
+            background-color: #dbeafe;
+            color: #1e40af;
+        }
+        .status-pending {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+
+        .expandable-row {
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .expandable-row:hover {
+            background-color: rgba(0, 0, 0, 0.03);
+        }
+        .expanded-row {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+        .step-details {
+            background-color: rgba(0, 0, 0, 0.02);
+        }
+        .chevron {
+            transition: transform 0.2s;
+        }
+        .expanded .chevron {
+            transform: rotate(90deg);
+        }
+
+        .summary-cell {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .progress-indicator {
+            width: 100px;
+            height: 8px;
+            background-color: #e5e7eb;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .progress-bar {
+            height: 100%;
+            background-color: #10b981;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        }
     </style>
 </head>
 <body class="gradient-bg min-h-screen flex flex-col">
 <!-- Header -->
-<div th:replace="~{fragments :: header}"></div>
+<header class="bg-white shadow-sm">
+    <div class="container mx-auto px-4 py-4">
+        <h1 class="text-xl font-bold text-gray-800">Test Automation Dashboard</h1>
+    </div>
+</header>
 
 <!-- Main Content -->
-<main class="container mx-auto px-4 py-12 flex-grow">
-    <div class="glass-card p-8 rounded-2xl shadow-xl animate__animated animate__fadeIn">
-        <div class="flex justify-between items-center mb-6">
-            <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-red-600 bg-clip-text text-transparent tracking-tight">TC Execution Monitoring</h1>
+<main class="container mx-auto px-4 py-8 flex-grow">
+    <div class="glass-card p-6 md:p-8 rounded-2xl shadow-xl">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+            <h1 class="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-600 to-red-600 bg-clip-text text-transparent tracking-tight">Test Case Execution Monitoring</h1>
+            <div class="flex gap-2">
+                <button id="refresh-btn" class="btn btn-sm btn-outline">
+                    <i class="fas fa-sync-alt mr-2"></i> Refresh
+                </button>
+            </div>
+        </div>
+
+        <div class="mb-4 flex justify-between items-center flex-wrap gap-4">
+            <div class="flex items-center">
+                <label class="mr-2 text-sm text-gray-600">Show</label>
+                <select id="custom-page-length" class="form-select rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50">
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+                <span class="ml-2 text-sm text-gray-600">entries</span>
+            </div>
+            <div class="relative">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-2">
+                    <i class="fas fa-search text-gray-400"></i>
+                </span>
+                <input type="search" id="custom-search" class="block w-full pl-8 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500" placeholder="Search test cases...">
+            </div>
         </div>
 
         <div class="overflow-x-auto">
-            <table id="tc-execution-log-table" class="min-w-full bg-white/50 backdrop-blur-sm rounded-lg overflow-hidden">
+            <table id="tc-execution-table" class="min-w-full bg-white/50 backdrop-blur-sm rounded-lg overflow-hidden">
                 <thead>
                 <tr class="bg-gray-50/50">
-                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Execution ID</th>
+                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide"></th>
                     <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">TC ID</th>
-                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Step ID</th>
+                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Execution ID</th>
                     <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Start Time</th>
                     <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">End Time</th>
                     <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Status</th>
-                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Error Message</th>
+                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Progress</th>
                 </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200/50">
-                <tr th:each="log : ${logs}" class="hover:bg-gray-50/50 transition-colors">
-                    <td class="py-3 px-4 text-sm font-normal" th:text="${log.executionId}"></td>
-                    <td class="py-3 px-4 text-sm font-normal" th:text="${log.tcId}"></td>
-                    <td class="py-3 px-4 text-sm font-normal" th:text="${log.stepId}"></td>
-                    <td class="py-3 px-4 text-sm font-normal" th:text="${log.startTime}"></td>
-                    <td class="py-3 px-4 text-sm font-normal" th:text="${log.endTime}"></td>
-                    <td class="py-3 px-4 text-sm font-normal" th:text="${log.status}"></td>
-                    <td class="py-3 px-4 text-sm font-normal">
-                        <pre class="whitespace-pre-wrap font-mono text-xs bg-gray-50/50 p-2 rounded-lg overflow-x-auto max-w-[300px] transition-all duration-300 hover:bg-gray-100/50 json-container"
-                             th:if="${log.errorMessage != null and not #strings.isEmpty(log.errorMessage)}">
-                            <code class="json-block" th:text="${log.errorMessage}"></code>
-                        </pre>
-                        <span th:if="${log.errorMessage == null or #strings.isEmpty(log.errorMessage)}" class="text-gray-400">N/A</span>
-                    </td>
-                </tr>
+                <!-- Group logs by test case ID -->
+                <th:block th:each="tcGroup : ${groupedLogs}">
+                    <!-- Get the first log to show test case summary -->
+                    <th:block th:with="firstLog=${tcGroup.value[0]}">
+                        <tr class="expandable-row" th:attr="data-tc-id=${tcGroup.key}">
+                            <td class="py-3 px-4 text-sm">
+                                <i class="fas fa-chevron-right chevron text-gray-400"></i>
+                            </td>
+                            <td class="py-3 px-4 text-sm font-medium" th:text="${tcGroup.key}"></td>
+                            <td class="py-3 px-4 text-sm font-mono" th:text="${firstLog.executionId}"></td>
+                            <td class="py-3 px-4 text-sm whitespace-nowrap"
+                                th:text="${#temporals.format(firstLog.startTime, 'yyyy-MM-dd HH:mm:ss')}"></td>
+                            <td class="py-3 px-4 text-sm whitespace-nowrap"
+                                th:text="${firstLog.endTime != null} ? ${#temporals.format(firstLog.endTime, 'yyyy-MM-dd HH:mm:ss')} : 'N/A'"></td>
+                            <td class="py-3 px-4 text-sm">
+                                <th:block th:with="status=${tcIdStatuses.get(tcGroup.key)}">
+                                    <span th:if="${status == 'SUCCESS'}" class="status-badge status-success">SUCCESS</span>
+                                    <span th:if="${status == 'FAILURE'}" class="status-badge status-failure">FAILURE</span>
+                                    <span th:if="${status == 'RUNNING'}" class="status-badge status-running">RUNNING</span>
+                                    <span th:if="${status == 'PENDING'}" class="status-badge status-pending">PENDING</span>
+                                </th:block>
+                            </td>
+                            <td class="py-3 px-4 text-sm">
+                                <div class="summary-cell">
+                                    <div class="progress-indicator">
+                                        <div th:if="${tcIdStatuses.get(tcGroup.key) == 'FAILURE'}"
+                                             class="progress-bar bg-red-500"
+                                             th:style="'width: ' + ${completedSteps.get(tcGroup.key)} + '%'"></div>
+                                        <div th:unless="${tcIdStatuses.get(tcGroup.key) == 'FAILURE'}"
+                                             class="progress-bar bg-green-500"
+                                             th:style="'width: ' + ${completedSteps.get(tcGroup.key)} + '%'"></div>
+                                    </div>
+                                    <span th:text="${completedStepCounts.get(tcGroup.key)} + '/' + ${totalStepCounts.get(tcGroup.key)}"></span>
+                                </div>
+                            </td>
+                        </tr>
+                    </th:block>
+
+                    <!-- Hidden row for step details -->
+                    <tr class="step-details hidden" th:attr="data-tc-id=${tcGroup.key}">
+                        <td colspan="7" class="p-0">
+                            <div class="p-4">
+                                <table class="details-table min-w-full bg-white/30 rounded-lg overflow-hidden">
+                                    <thead>
+                                    <tr class="bg-gray-100/50">
+                                        <th class="py-2 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Step ID</th>
+                                        <th class="py-2 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Sequence</th>
+                                        <th class="py-2 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Start Time</th>
+                                        <th class="py-2 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">End Time</th>
+                                        <th class="py-2 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Status</th>
+                                        <th class="py-2 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Error Message</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    <!-- Sort steps by sequence number -->
+                                    <tr th:each="step : ${sortedSteps.get(tcGroup.key)}" class="hover:bg-gray-50/50 transition-colors">
+                                        <td class="py-2 px-4 text-sm font-normal" th:text="${step.stepId}"></td>
+                                        <td class="py-2 px-4 text-sm font-normal" th:text="${step.sequenceNumber}"></td>
+                                        <td class="py-2 px-4 text-sm font-normal whitespace-nowrap"
+                                            th:text="${#temporals.format(step.startTime, 'yyyy-MM-dd HH:mm:ss')}"></td>
+                                        <td class="py-2 px-4 text-sm font-normal whitespace-nowrap"
+                                            th:text="${step.endTime != null} ? ${#temporals.format(step.endTime, 'yyyy-MM-dd HH:mm:ss')} : 'N/A'"></td>
+                                        <td class="py-2 px-4 text-sm font-normal">
+                                            <span th:if="${step.status == 'SUCCESS'}" class="status-badge status-success">SUCCESS</span>
+                                            <span th:if="${step.status == 'FAILURE'}" class="status-badge status-failure">FAILURE</span>
+                                            <span th:if="${step.status == 'RUNNING'}" class="status-badge status-running">RUNNING</span>
+                                            <span th:if="${step.status == 'PENDING'}" class="status-badge status-pending">PENDING</span>
+                                        </td>
+                                        <td class="py-2 px-4 text-sm font-normal">
+                                            <div th:if="${step.errorMessage != null and not #strings.isEmpty(step.errorMessage)}"
+                                                 class="relative">
+                                                <pre class="whitespace-pre-wrap font-mono text-xs bg-gray-50/50 p-2 rounded-lg overflow-x-auto max-w-[300px] json-container cursor-pointer transition-all duration-300 hover:bg-gray-100/50"
+                                                     onclick="event.stopPropagation(); this.classList.toggle('expanded')">
+                                                    <code class="json-block" th:text="${step.errorMessage}"></code>
+                                                </pre>
+                                                <span class="absolute bottom-1 right-1 text-xs text-gray-400 bg-white/70 px-1 rounded">click to expand</span>
+                                            </div>
+                                            <span th:if="${step.errorMessage == null or #strings.isEmpty(step.errorMessage)}" class="text-gray-400">N/A</span>
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </td>
+                    </tr>
+                </th:block>
                 </tbody>
             </table>
         </div>
@@ -56,41 +238,90 @@
 </main>
 
 <!-- Footer -->
-<div th:replace="~{fragments :: footer}"></div>
+<footer class="bg-white py-4 mt-8">
+    <div class="container mx-auto px-4 text-center text-gray-600 text-sm">
+        © 2023 Test Automation Dashboard
+    </div>
+</footer>
 
 <!-- Scripts -->
-<div th:replace="~{fragments :: scripts}"></div>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
 
-<!-- Page-specific Script -->
 <script>
     $(document).ready(function() {
-        $('#tc-execution-log-table').DataTable({
-            "pageLength": 25,
-            "dom": 'lfBrtip',
-            "buttons": [
-                { extend: 'csv', text: 'Export CSV' },
-                { extend: 'excel', text: 'Export Excel' },
-                { extend: 'pdf', text: 'Export PDF' }
-            ],
-            "language": {
-                "search": "",
-                "searchPlaceholder": "Search logs..."
+        // Handle expand/collapse functionality
+        $('#tc-execution-table').on('click', '.expandable-row', function() {
+            const tcId = $(this).data('tc-id');
+            const $detailsRow = $(`tr.step-details[data-tc-id="${tcId}"]`);
+            const $chevron = $(this).find('.chevron');
+
+            $detailsRow.toggleClass('hidden');
+            $(this).toggleClass('expanded');
+            $chevron.toggleClass('fa-chevron-right fa-chevron-down');
+        });
+
+        // Enhanced JSON Syntax Highlighting
+        $('.json-block').each(function() {
+            const $this = $(this);
+            let jsonData = $this.text().trim();
+
+            if (!jsonData) return;
+
+            try {
+                const parsedJson = JSON.parse(jsonData);
+                let formattedJson = JSON.stringify(parsedJson, null, 2);
+                formattedJson = formattedJson
+                    .replace(/("[^"]*")(\s*:)/g, '<span class="json-key">$1</span>$2')
+                    .replace(/: ("[^"]*")/g, ': <span class="json-string">$1</span>')
+                    .replace(/: (true|false)/g, ': <span class="json-boolean">$1</span>')
+                    .replace(/: null/g, ': <span class="json-null">null</span>')
+                    .replace(/: (\d+)/g, ': <span class="json-number">$1</span>');
+                $this.html(formattedJson);
+            } catch (e) {
+                $this.addClass('text-gray-700');
             }
         });
 
-        // JSON Syntax Highlighting
-        $('.json-block').each(function() {
-            let jsonData = $(this).text().trim();
-            try {
-                let formattedJson = JSON.stringify(JSON.parse(jsonData), null, 2);
-                formattedJson = formattedJson.replace(/(".*?")/g, '<span class="json-string">$1</span>')
-                                             .replace(/(:\s*\d+)/g, '<span class="json-value">$1</span>')
-                                             .replace(/(:\s*true|false)/g, '<span class="json-boolean">$1</span>')
-                                             .replace(/(:\s*null)/g, '<span class="json-null">$1</span>');
-                $(this).html(formattedJson);
-            } catch (e) {
-                console.warn('Invalid JSON format:', jsonData);
+        // Initialize DataTable with proper configuration
+        const table = $('#tc-execution-table').DataTable({
+            "paging": true,
+            "searching": true,
+            "info": true,
+            "lengthChange": false,
+            "pageLength": 10,
+            "columns": [
+                { "orderable": false, "searchable": false },
+                null, null, null, null, null, null
+            ],
+            "autoWidth": false,
+            "dom": "lrtip", // Hide default controls since we have custom ones
+            "drawCallback": function() {
+                // Re-attach event handlers after table redraw
+                $('.expandable-row').off('click').on('click', function() {
+                    const tcId = $(this).data('tc-id');
+                    const $detailsRow = $(`tr.step-details[data-tc-id="${tcId}"]`);
+                    const $chevron = $(this).find('.chevron');
+                    $detailsRow.toggleClass('hidden');
+                    $(this).toggleClass('expanded');
+                    $chevron.toggleClass('fa-chevron-right fa-chevron-down');
+                });
             }
+        });
+
+        // Custom search input
+        $('#custom-search').on('keyup', function() {
+            table.search(this.value).draw();
+        });
+
+        // Custom page length
+        $('#custom-page-length').on('change', function() {
+            table.page.len(parseInt($(this).val())).draw();
+        });
+
+        // Refresh button
+        $('#refresh-btn').on('click', function() {
+            location.reload();
         });
     });
 </script>

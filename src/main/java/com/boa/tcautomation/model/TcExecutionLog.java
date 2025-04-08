@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "tc_execution_log")
+@Data  // Using Lombok's @Data annotation if you prefer
 public class TcExecutionLog {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -17,6 +18,9 @@ public class TcExecutionLog {
 
     @Column(name = "STEP_ID")
     private Integer stepId;
+
+    @Column(name = "SEQUENCE_NUMBER")
+    private Integer sequenceNumber;
 
     @Column(name = "START_TIME")
     private LocalDateTime startTime;
@@ -31,6 +35,16 @@ public class TcExecutionLog {
     private String errorMessage;
 
     // Getters and setters
+    // You already have most getters and setters, just adding the one for sequenceNumber
+
+    public Integer getSequenceNumber() {
+        return sequenceNumber;
+    }
+
+    public void setSequenceNumber(Integer sequenceNumber) {
+        this.sequenceNumber = sequenceNumber;
+    }
+
     public Long getExecutionId() {
         return executionId;
     }
