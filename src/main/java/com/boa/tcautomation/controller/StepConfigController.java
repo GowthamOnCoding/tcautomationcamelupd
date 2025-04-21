@@ -1,6 +1,7 @@
 package com.boa.tcautomation.controller;
 
 import com.boa.tcautomation.model.StepConfig;
+import com.boa.tcautomation.repository.ParameterSchemaRepository;
 import com.boa.tcautomation.repository.StepConfigRepository;
 
 import java.util.List;
@@ -21,6 +22,8 @@ public class StepConfigController {
 
     @Autowired
     private StepConfigRepository stepConfigRepository;
+    @Autowired
+    private ParameterSchemaRepository parameterSchemaRepository;
 
     @PostConstruct
     public void init() {
@@ -86,7 +89,15 @@ public class StepConfigController {
     @PostMapping("/save")
     public String saveStepConfig(@ModelAttribute StepConfig stepConfig) {
         logger.info("Saving step configuration: {}", stepConfig.getStepName());
+
+        if (stepConfig.getParameterSchema() != null) {
+            boolean exists = parameterSchemaRepository.existsById(stepConfig.getParameterSchema());
+            if (!exists) {
+                throw new IllegalArgumentException("Invalid parameter_schema: " + stepConfig.getParameterSchema());
+            }
+        }
         stepConfigRepository.save(stepConfig);
+
         return "redirect:/stepconfig/list";
     }
 

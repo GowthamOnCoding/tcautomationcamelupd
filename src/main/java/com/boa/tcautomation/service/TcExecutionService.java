@@ -19,16 +19,28 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.env.Environment;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class TcExecutionService {
@@ -344,5 +356,82 @@ public class TcExecutionService {
                 .addValue("lastUpdatedUser", "default_user")
                 .addValue("schedulerId", "default_scheduler_id");
         namedParameterJdbcTemplate.update(insertQuery, insertParams);
+    }
+
+    public void cleanAndInsertTestData(TcMaster tcMaster, TcSteps tcStep) {
+        log.info("{}#{} Updating TC_Execution log to In Progress", tcMaster.getTcId(), tcStep.getStepId());
+        long tcExecId = tcMasterServiceHelper.insertLogEntry(tcMaster.getTcId(), tcStep.getStepId(), Constants.INPROGRESS);
+
+        String filePath = tcStep.getParameters().trim();
+        boolean isClasspathFile = filePath.startsWith("classpath:");
+        List<String> sqlStatements;
+
+        try {
+            // Read SQL content
+            String sqlContent;
+            if (isClasspathFile) {
+                String resourcePath = filePath.replace("classpath:", "").trim();
+                ClassPathResource resource = new ClassPathResource(resourcePath);
+                if (!resource.exists()) {
+                    throw new FileNotFoundException("Classpath SQL file not found: " + resourcePath);
+                }
+                sqlContent = new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+            } else {
+                Path path = Paths.get(filePath);
+                if (!Files.exists(path) || !Files.isReadable(path)) {
+                    throw new FileNotFoundException("SQL file not found or unreadable: " + filePath);
+                }
+                sqlContent = Files.readString(path);
+            }
+
+            // Split & clean SQL statements (skip comments)
+            sqlStatements = Arrays.stream(sqlContent.split(";"))
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty() && !s.startsWith("--") && !s.startsWith("/*"))
+                    .collect(Collectors.toList());
+
+        } catch (Exception e) {
+            log.error("{}#{} Error reading SQL file: {}", tcMaster.getTcId(), tcStep.getStepId(), e.getMessage());
+            tcMasterServiceHelper.updateLogEntry(tcExecId, Constants.FAILED, "");
+            throw new RuntimeException("Error reading SQL file: " + e.getMessage(), e);
+        }
+
+        // Run with retry (1 retry on failure)
+        int maxRetries = 2;
+        for (int attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                log.info("{}#{} Attempt {}: Starting SQL execution", tcMaster.getTcId(), tcStep.getStepId(), attempt);
+
+                // Begin transaction
+                DataSourceTransactionManager txManager = new DataSourceTransactionManager(jdbcTemplate.getDataSource());
+                TransactionDefinition def = new DefaultTransactionDefinition();
+                TransactionStatus status = txManager.getTransaction(def);
+
+                try {
+                    for (String stmt : sqlStatements) {
+                        log.info("{}#{} Executing SQL: {}", tcMaster.getTcId(), tcStep.getStepId(), stmt);
+                        jdbcTemplate.execute(stmt);
+                    }
+
+                    txManager.commit(status);
+                    log.info("{}#{} SQL execution successful", tcMaster.getTcId(), tcStep.getStepId());
+                    tcMasterServiceHelper.updateLogEntry(tcExecId, Constants.COMPLETED, "");
+                    break; // Success: exit retry loop
+
+                } catch (Exception sqlEx) {
+                    txManager.rollback(status);
+                    throw new RuntimeException("SQL execution failed, rolled back: " + sqlEx.getMessage(), sqlEx);
+                }
+
+            } catch (Exception ex) {
+                log.error("{}#{} Attempt {} failed: {}", tcMaster.getTcId(), tcStep.getStepId(), attempt, ex.getMessage());
+                if (attempt == maxRetries) {
+                    tcMasterServiceHelper.updateLogEntry(tcExecId, Constants.FAILED, "");
+                    throw new RuntimeException("All attempts failed: " + ex.getMessage(), ex);
+                } else {
+                    log.info("{}#{} Retrying...", tcMaster.getTcId(), tcStep.getStepId());
+                }
+            }
+        }
     }
 }

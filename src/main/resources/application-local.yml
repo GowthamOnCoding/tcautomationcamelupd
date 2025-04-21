@@ -50,3 +50,6 @@ common:
 server:
   port: 8010
 
+file:
+  upload:
+    sql-dir: C:\\uploads\\sql
