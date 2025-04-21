@@ -86,16 +86,7 @@ public class TcStepsController {
                 sqlFile.transferTo(dest);
 
                 // Append the generated file name to the parameters field
-                String existingParameters = tcSteps.getParameters();
-                if (existingParameters == null || existingParameters.isEmpty()) {
-                    tcSteps.setParameters(dest.getAbsolutePath()); // Set the generated file name if parameters is empty
-                } else {
-                    if(existingParameters.equalsIgnoreCase("{}")){
-                        tcSteps.setParameters(dest.getAbsolutePath()); // Append the file name to existing parameters
-                    } else {
-                        tcSteps.setParameters(existingParameters + "," + dest.getAbsolutePath()); // Append the file name to existing parameters
-                    }
-                }
+                tcSteps.setParameters(dest.getAbsolutePath()); // Set the generated file name if parameters is empty
 
             } catch (IOException e) {
                 e.printStackTrace();
