@@ -9,6 +9,8 @@ import com.boa.tcautomation.util.Constants;
 import com.boa.tcautomation.util.DatabaseToCsvUtil;
 import com.boa.tcautomation.util.DbUtil;
 import com.boa.tcautomation.util.SshUtil;
+import com.boa.tcautomation.validation.QueryValidationFacade;
+import com.boa.tcautomation.validation.ValidationResult;
 import com.boa.tcautomation.validator.ParameterValidationService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -68,6 +70,9 @@ public class TcExecutionService {
 
     @Autowired
     private TcMasterServiceHelper tcMasterServiceHelper;
+
+    @Autowired
+    private QueryValidationFacade queryValidationFacade;
 
     @Autowired
     private Environment env;
@@ -432,6 +437,40 @@ public class TcExecutionService {
                     log.info("{}#{} Retrying...", tcMaster.getTcId(), tcStep.getStepId());
                 }
             }
+        }
+    }
+    public void executeAndValidateQuery(TcMaster tcMaster, TcSteps tcStep) {
+        log.info("{}#{} updating TC_Execution log to In Progress", tcMaster.getTcId(), tcStep.getStepId());
+        long tcExecId = tcMasterServiceHelper.insertLogEntry(tcMaster.getTcId(), tcStep.getStepId(), Constants.INPROGRESS);
+        log.info("{}#{} executing and validating query", tcMaster.getTcId(), tcStep.getStepId());
+
+        try {
+            if (tcMasterServiceHelper.getAndValidateParametersSchema(tcStep)) {
+                // Use the facade to process, execute, and validate the query
+                ValidationResult validationResult = queryValidationFacade.validateQuery(tcStep.getParameters(), tcMaster);
+
+                if (validationResult.isValid()) {
+                    log.info("{}#{} validation successful: {}", tcMaster.getTcId(), tcStep.getStepId(), validationResult.getMessage());
+                    log.info("{}#{} updating TC_Execution log to Completed", tcMaster.getTcId(), tcStep.getStepId());
+                    tcMasterServiceHelper.updateLogEntry(tcExecId, Constants.COMPLETED, validationResult.getMessage());
+                } else {
+                    log.info("{}#{} validation failed: {}", tcMaster.getTcId(), tcStep.getStepId(), validationResult.getMessage());
+                    log.info("{}#{} updating TC_Execution log to Failed", tcMaster.getTcId(), tcStep.getStepId());
+                    tcMasterServiceHelper.updateLogEntry(tcExecId, Constants.FAILED,
+                            String.format("Validation failed. %s. Expected: %s, Actual: %s",
+                                    validationResult.getMessage(),
+                                    validationResult.getExpectedResult(),
+                                    validationResult.getActualResult()));
+                }
+            } else {
+                log.info("{}#{} updating TC_Execution log to Failed", tcMaster.getTcId(), tcStep.getStepId());
+                tcMasterServiceHelper.updateLogEntry(tcExecId, Constants.FAILED, "Schema validation failed");
+                throw new RuntimeException("Schema validation failed");
+            }
+        } catch (Exception e) {
+            log.info("{}#{} updating TC_Execution log to Failed", tcMaster.getTcId(), tcStep.getStepId());
+            tcMasterServiceHelper.updateLogEntry(tcExecId, Constants.FAILED, "Error: " + e.getMessage());
+            throw new RuntimeException("Error executing and validating query: " + e.getMessage(), e);
         }
     }
 }
