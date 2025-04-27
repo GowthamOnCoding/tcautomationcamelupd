@@ -30,7 +30,7 @@
             </select>
         </div>
 
-        <!-- System Metrics Cards and Start TCA Button -->
+        <!-- System Metrics Cards and Action Buttons -->
         <div class="grid md:grid-cols-4 gap-6 mb-8">
             <!-- CPU Usage -->
             <div class="glass-card p-4 rounded-xl">
@@ -87,12 +87,33 @@
                 </div>
             </div>
 
-            <!-- Start TCA Button -->
-            <div class="glass-card p-4 rounded-xl flex items-center justify-center">
-                <button id="startTCA" class="btn glass-card px-4 py-2 rounded-lg text-blue-600 hover:text-blue-800 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg flex items-center gap-2">
-                    <i class="fas fa-shield-alt"></i>
-                    <span class="tracking-tight">Start TCA</span>
-                </button>
+            <!-- Action Buttons Card -->
+            <div class="glass-card p-4 rounded-xl">
+                <div class="flex flex-col space-y-4">
+                    <!-- Start TCA Button -->
+                    <div class="mb-2">
+                        <div class="bg-blue-100 p-3 rounded-full mb-3 mx-auto w-12 h-12 flex items-center justify-center">
+                            <i class="fas fa-shield-alt text-xl text-blue-600"></i>
+                        </div>
+                        <h3 class="font-semibold text-md mb-2 text-blue-600 text-center">Security Analysis</h3>
+                        <button id="startTCA" class="btn glass-card w-full px-4 py-2 rounded-lg text-blue-600 hover:text-blue-800 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg flex items-center gap-2 justify-center">
+                            <i class="fas fa-play"></i>
+                            <span class="tracking-tight">Start TCA</span>
+                        </button>
+                    </div>
+
+                    <!-- Run Socket Client Button -->
+                    <div>
+                        <div class="bg-indigo-100 p-3 rounded-full mb-3 mx-auto w-12 h-12 flex items-center justify-center">
+                            <i class="fas fa-plug text-xl text-indigo-600"></i>
+                        </div>
+                        <h3 class="font-semibold text-md mb-2 text-indigo-600 text-center">Network Client</h3>
+                        <button id="runSocketClient" class="btn glass-card w-full px-4 py-2 rounded-lg text-indigo-600 hover:text-indigo-800 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg flex items-center gap-2 justify-center">
+                            <i class="fas fa-terminal"></i>
+                            <span class="tracking-tight">Run Socket Client</span>
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -121,6 +142,22 @@
             <h3 class="font-semibold text-lg mb-4">System Health Check</h3>
             <div id="systemHealth" class="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <!-- System health details will be shown here -->
+            </div>
+        </div>
+
+        <!-- Socket Client Status Card -->
+        <div class="glass-card p-6 rounded-xl mt-8">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-semibold text-lg">Socket Client Status</h3>
+                <div>
+                    <span id="socketStatusBadge" class="glass-card px-3 py-1 rounded-full text-sm">
+                        <i class="fas fa-circle text-gray-400"></i>
+                        <span>Unknown</span>
+                    </span>
+                </div>
+            </div>
+            <div id="socketClientOutput" class="w-full bg-gray-800 text-green-400 p-4 rounded-lg max-h-40 overflow-y-auto font-mono text-sm">
+                <pre>Socket client output will appear here...</pre>
             </div>
         </div>
 
@@ -196,6 +233,10 @@
             }
         });
 
+        // Socket Client Status
+        let socketClientRunning = false;
+        let socketStatusCheckInterval;
+
         // Handle Host Selection
         $('#hostSelect').change(function() {
             const host = $(this).val();
@@ -204,6 +245,7 @@
                 updateProcesses(host);
                 updateSystemHealth(host);
                 checkSystemAlerts(host);
+                checkSocketClientStatus(host);
             }
         });
 
@@ -215,6 +257,7 @@
                 updateProcesses(host);
                 updateSystemHealth(host);
                 checkSystemAlerts(host);
+                checkSocketClientStatus(host);
             }
         });
 
@@ -226,6 +269,11 @@
                 updateProcesses(host);
                 updateSystemHealth(host);
                 checkSystemAlerts(host);
+
+                // Only check socket status if we're not actively polling
+                if (!socketClientRunning) {
+                    checkSocketClientStatus(host);
+                }
             }
         }, 30000);
 
@@ -367,6 +415,50 @@
             }).fail(function() {
                 $('#systemHealth').text("Error fetching system health info.");
             });
+        }
+
+        // Check Socket Client Status
+        function checkSocketClientStatus(host) {
+            $.get(`/api/socket/status/${host}`, function(data) {
+                if (data.running) {
+                    $('#socketStatusBadge').html('<i class="fas fa-circle text-green-500"></i> <span>Running</span>');
+                    $('#socketStatusBadge').removeClass('text-gray-400').addClass('text-green-500');
+                    $('#socketClientOutput').html(`<pre>${data.lastOutput || 'No output available'}</pre>`);
+                } else {
+                    $('#socketStatusBadge').html('<i class="fas fa-circle text-gray-400"></i> <span>Inactive</span>');
+                    $('#socketStatusBadge').removeClass('text-green-500').addClass('text-gray-400');
+                }
+            }).fail(function() {
+                $('#socketStatusBadge').html('<i class="fas fa-circle text-red-500"></i> <span>Error</span>');
+                $('#socketStatusBadge').removeClass('text-green-500 text-gray-400').addClass('text-red-500');
+                $('#socketClientOutput').html('<pre>Error checking socket client status</pre>');
+            });
+        }
+
+        // Poll Socket Client Status - called when socket client is running
+        function pollSocketClientStatus(host) {
+            if (socketStatusCheckInterval) {
+                clearInterval(socketStatusCheckInterval);
+            }
+
+            socketStatusCheckInterval = setInterval(function() {
+                $.get(`/api/socket/status/${host}`, function(data) {
+                    $('#socketClientOutput').html(`<pre>${data.lastOutput || 'No output available'}</pre>`);
+
+                    if (!data.running) {
+                        // Socket client has stopped
+                        $('#socketStatusBadge').html('<i class="fas fa-circle text-gray-400"></i> <span>Inactive</span>');
+                        $('#socketStatusBadge').removeClass('text-green-500').addClass('text-gray-400');
+                        socketClientRunning = false;
+                        clearInterval(socketStatusCheckInterval);
+                    }
+                }).fail(function() {
+                    $('#socketStatusBadge').html('<i class="fas fa-circle text-red-500"></i> <span>Error</span>');
+                    $('#socketStatusBadge').removeClass('text-green-500 text-gray-400').addClass('text-red-500');
+                    socketClientRunning = false;
+                    clearInterval(socketStatusCheckInterval);
+                });
+            }, 3000); // Check every 3 seconds
         }
 
         // Check System Alerts
@@ -536,7 +628,7 @@
             $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Starting...');
 
             $.ajax({
-                url: 'api/tca/invoke',
+                url: '/api/tca/invoke',
                 type: 'POST',
                 data: { host: host },
                 success: function(response) {
@@ -546,7 +638,76 @@
                     showErrorAlert("Error starting TCA process!");
                 },
                 complete: function() {
-                    $('#startTCA').prop('disabled', false).html('<i class="fas fa-shield-alt"></i> <span class="tracking-tight">Start TCA</span>');
+                    $('#startTCA').prop('disabled', false).html('<i class="fas fa-play"></i> <span class="tracking-tight">Start TCA</span>');
+                }
+            });
+        });
+
+        // Socket Client Button Handler
+        $('#runSocketClient').click(function() {
+            const host = $('#hostSelect').val();
+            if (!host) {
+                showErrorAlert("Please select a host first!");
+                return;
+            }
+
+            $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Running...');
+
+            $.ajax({
+                url: '/api/socket/run',
+                type: 'POST',
+                data: {
+                    host: host,
+                    params: {
+                        // Add any parameters your socket client script needs
+                        port: 8080,
+                        timeout: 30
+                    }
+                },
+                success: function(response) {
+                    showSuccessAlert("Socket client script started successfully");
+                    socketClientRunning = true;
+                    $('#socketStatusBadge').html('<i class="fas fa-circle text-green-500"></i> <span>Running</span>');
+                    $('#socketStatusBadge').removeClass('text-gray-400 text-red-500').addClass('text-green-500');
+                    $('#socketClientOutput').html('<pre>Socket client started, waiting for output...</pre>');
+
+                    // Start polling for updates
+                    pollSocketClientStatus(host);
+                },
+                error: function(xhr) {
+                    showErrorAlert(xhr.responseJSON?.message || "Error running socket client script!");
+                },
+                complete: function() {
+                    $('#runSocketClient').prop('disabled', false).html('<i class="fas fa-terminal"></i> <span class="tracking-tight">Run Socket Client</span>');
+                }
+            });
+        });
+
+        // Stop Socket Client Button
+        $('#stopSocketClient').click(function() {
+            const host = $('#hostSelect').val();
+            if (!host) {
+                showErrorAlert("Please select a host first!");
+                return;
+            }
+
+            $.ajax({
+                url: '/api/socket/stop',
+                type: 'POST',
+                data: { host: host },
+                success: function() {
+                    showSuccessAlert("Socket client stopped successfully");
+                    socketClientRunning = false;
+                    $('#socketStatusBadge').html('<i class="fas fa-circle text-gray-400"></i> <span>Inactive</span>');
+                    $('#socketStatusBadge').removeClass('text-green-500 text-red-500').addClass('text-gray-400');
+
+                    // Stop polling
+                    if (socketStatusCheckInterval) {
+                        clearInterval(socketStatusCheckInterval);
+                    }
+                },
+                error: function() {
+                    showErrorAlert("Error stopping socket client!");
                 }
             });
         });

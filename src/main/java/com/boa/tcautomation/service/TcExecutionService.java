@@ -473,4 +473,25 @@ public class TcExecutionService {
             throw new RuntimeException("Error executing and validating query: " + e.getMessage(), e);
         }
     }
+    public void introduceDelay(TcMaster tcMaster, TcSteps step) {
+
+        long tcExecId = tcMasterServiceHelper.insertLogEntry(tcMaster.getTcId(), step.getStepId(), Constants.INPROGRESS);
+        log.info("[{}][{}] - Introduced delay step called in thread - {}", tcMaster.getTcId(), step.getSequenceNo(), step.getStepName(), Thread.currentThread().getName());
+
+        try {
+            if (tcMasterServiceHelper.getAndValidateParametersSchema(step)) {
+                IntroduceDelayJSON delayJSON = new ObjectMapper().readValue(step.getParameters(), IntroduceDelayJSON.class);
+                long delaySeconds = delayJSON.getDelayInSeconds();
+                tcMasterServiceHelper.introduceDelay(delaySeconds);
+            } else {
+                log.info("[{}][{}] - Updating delay step log to Failed.", tcMaster.getTcId(), step.getSequenceNo(), step.getStepName());
+                tcMasterServiceHelper.updateLogEntry(tcExecId, Constants.FAILED, "");
+                throw new RuntimeException("Schema validation failed");
+            }
+        } catch (Exception e) {
+            log.info("[{}][{}] - Error while updating delay step log to Failed.", tcMaster.getTcId(), step.getSequenceNo(), step.getStepName());
+            tcMasterServiceHelper.updateLogEntry(tcExecId, Constants.FAILED, "");
+            throw new RuntimeException("Error while introducing delay step: " + e.getMessage(), e);
+        }
+    }
 }

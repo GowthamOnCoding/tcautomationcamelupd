@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
@@ -309,5 +310,10 @@ public class TcMasterServiceHelper {
             jdbcTemplate.update(insertDataSQL);
             System.out.println("Data inserted into backup table.");
         }
+
+    }
+
+    public void introduceDelay(long delaySeconds) throws InterruptedException {
+        Thread.sleep(Duration.ofSeconds(delaySeconds));
     }
 }
