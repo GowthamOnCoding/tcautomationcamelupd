@@ -1,13 +1,50 @@
+TD-SDD Metadata start case (Oracle)
 DBTYPE-ORACLE
 DISC-SDD
-TD-SDD Metadata start case
-DIAC:TN-"TestTopic",EST-"IDW,FUNNEL,AIML,IEDPS",EFT-"FUNNEL"
+VALTARGET-BOTH
+VAL: P-C>=1, MD-IP=0, KDUR<=900, S-COMPLETED>=1, S-FAILED=0
+DIAC:TN-"TestTopic_A",EST-"IDW,FUNNEL,AIML,IEDPS,IDW",EFT-"FUNNEL,ESPIAL"
 DIDP:ID-1,MN-"Machine1",DN-"Database1",SN-"Schema1",UID-"User1",PWD-"Pass1",JUR-"jdbc:oracle:thin:@//localhost:1521/ORCL"
-DIKS:ST-2025-09-16 09:00:00,CTM-1,P-C,GID-"Group-A",CID-"CFG-01"
+DIKS:ST-2025-09-16 09:00:00,CTM-10,P-C,MD-IP,GID-"Group-A",CID-"CFG-01"
+DIAS:
+DISW:
+DIDM:
 
-DBTYPE-MYSQL
+
+TD-UDD smoke test (Hive)
+DBTYPE-HIVE
 DISC-UDD
-TD-UDD Smoke Test
-DIAC:TN-"OrdersTopic",EST-"",EFT-""     -- empty lists = all flags 0
-DIDP:ID-2,MN-"Machine2",DN-"Database2",SN-"Schema2",UID-"User2",PWD-"Pass2",JUR-"jdbc:mysql://localhost:3306/testdb"
-DIKS:MD-IP,FC-C,GID-"Group-B",CTH-2,CID-"CFG-02"
+VALTARGET-KAFKA_ONLY
+VAL: P-PP>=1, EC-C>=1, KDUR<=300, AIC-F=0
+DIAC:TN-"HiveTopic",EST-"IDW"
+DIDP:ID-2,MN-"HiveNode01",DN-"HiveDB",SN-"HiveSchema",UID-"huser",PWD-"hpass",JURL-"jdbc:hive2://hivehost:10000/default"
+DIKS:CTD-1,P-PP,EC-C,GID-"Group-B",CID-"CFG-02"
+DIAS:
+DISW:
+DIDM:
+
+
+TD-AIML + FUNNEL route (Mongo)
+DBTYPE-MONGODB
+DISC-SDD
+VALTARGET-SCHED_ONLY
+VAL: S-COMPLETED>=1, S-FAILED=0
+DIAC:TN-"MongoTopic",EST-"FUNNEL,AIML",EFT-"IDW,FUNNEL"
+DIDP:ID-3,MN-"MongoSrv",DN-"MongoDB01",SN-"mg_schema",UID-"muser",PWD-"mpass",JUR-"mongodb://localhost:27017"
+DIKS:CTMO-2,AIC-C,IEC-F,FC-C,GID-"Group-C",CID-"CFG-03"
+DIAS:
+DISW:
+DIDM:
+
+
+TD-Mixed events, default times (Teradata)
+DBTYPE-TERADATA
+DISC-SDD
+VALTARGET-BOTH
+VAL: P-C>=1, MD-C>=1, FC-F<=1, IDC-IP=0, KDUR<=1200, S-COMPLETED>=1
+DIAC:TN-"MixedTopic",EST-"IDW,ESPIAL",EFT-"ESPIAL"
+DIDP:ID-4,MN-"TD-Node",DN-"TD_DB",SN-"TD_SCH",UID-"tduser",PWD-"tdpass",JUR-"jdbc:teradata://tdhost/database=td"
+DIKS:P-C,MD-C,IDC-IP,FC-F,GID-"Group-D",CID-"CFG-04"
+DIAS:
+DISW:
+DIDM:
