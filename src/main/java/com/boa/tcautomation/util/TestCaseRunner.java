@@ -1,10 +1,5 @@
 package com.boa.tcautomation.util;
 
-import com.boa.tcautomation.controller.APIContrOoller;
-import com.boa.tcautomation.util.REConstants;
-import com.boa.tcautomation.util.TestcaseRuleGen;
-import com.boa.tcautomation.util.TestcaseRuleGen.*;
-import com.boa.tcautomation.util.DbUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,20 +11,18 @@ import java.nio.file.Path;
 import java.util.*;
 
 import static com.boa.tcautomation.util.REConstants.*;
+import static com.boa.tcautomation.util.TestcaseRuleGen.*;
 
 @Component
 public class TestCaseRunner implements CommandLineRunner {
 
-    @Autowired
-    private DbUtil dbUtil;              // now non-null (Spring injects)
-    @Autowired
-    private TestcaseRuleGen gen;
+    @Autowired private DbUtil dbUtil;
+    @Autowired private TestcaseRuleGen gen;
 
     private static final Logger logger = LoggerFactory.getLogger(TestCaseRunner.class);
 
-
-
-    public void run(String ... args) throws Exception {
+    @Override
+    public void run(String... args) throws Exception {
         List<String> lines = loadRules();
         List<List<String>> blocks = splitByBlankLine(lines);
         int caseNo = 0;
@@ -38,66 +31,74 @@ public class TestCaseRunner implements CommandLineRunner {
             caseNo++;
             TestBlock tb = parseBlock(b);
 
-            // allocate IDs
-            tb.tcId       = "TC_" + String.format("%06d", allocateSeq("TC", START_TC_SEQ));
+            // allocate TC_ID / AIT_NO
+            tb.tcId       = "TC_" + String.format("%06d", allocateSeq("TC",  START_TC_SEQ));
             tb.aitNoBare  = String.valueOf(allocateSeq("AIT", START_AIT_SEQ));
             tb.aitNoKafka = ("SDD".equalsIgnoreCase(tb.disc) ? AIT_PREFIX_SDD : AIT_PREFIX_DEFAULT) + tb.aitNoBare;
 
             // insert tc_master
             String sqlTc = String.format(QRY_INSERT_TC_MASTER_FMT, tb.tcId, esc(tb.tcDesc), esc(tb.tcDesc), tb.aitNoBare);
-            dbUtil.executeQuery(sqlTc);
+            if (!dbUtil.executeQuery(sqlTc)) throw new RuntimeException("Failed to insert tc_master for " + tb.tcId);
 
-            // write artifact file (DIAC + DIDP + DIKS)
+            // write Step-1 artifact file
             String artifact = gen.writeArtifact(tb);
-            logger.info("artifact: {}", artifact);
-            // 6 steps
+            String artifactPath = artifact.replace("\\", "/");
+
+            // build Step-5 validation param (TRUE/FALSE)
+            String validationParam = gen.buildValidationParam(tb);
+
+            // Register 6 steps (sequence numbers 1..6)
             int seq = 1;
-            String artifactPath = artifact.replace("\\", "/"); // normalize for cross-platform
-
-            dbUtil.executeQuery(String.format(QRY_INSERT_TC_STEP_FMT, tb.tcId, STEP_CLEAN, artifactPath, seq)); seq++;
-            dbUtil.executeQuery(String.format(QRY_INSERT_TC_STEP_FMT, tb.tcId, STEP_EXPORT, STEP_EXPORT_BEFORE_PARAM, seq)); seq++;
-            dbUtil.executeQuery(String.format(QRY_INSERT_TC_STEP_FMT, tb.tcId, STEP_RUN_SCHED, STEP_RUN_SCHED_PARAM, seq)); seq++;
-            dbUtil.executeQuery(String.format(QRY_INSERT_TC_STEP_FMT, tb.tcId, STEP_DELAY,  STEP_DELAY_PARAM, seq)); seq++;
-            dbUtil.executeQuery(String.format(QRY_INSERT_TC_STEP_FMT, tb.tcId, STEP_VALIDATE, STEP_VALIDATE_PARAM, seq)); seq++;
-            dbUtil.executeQuery(String.format(QRY_INSERT_TC_STEP_FMT, tb.tcId, STEP_EXPORT, STEP_EXPORT_AFTER_PARAM, seq)); seq++;
-
+            dbUtil.executeQuery(String.format(QRY_INSERT_TC_STEP_FMT, tb.tcId, STEP_CLEAN,    artifactPath,      seq)); seq++;
+            dbUtil.executeQuery(String.format(QRY_INSERT_TC_STEP_FMT, tb.tcId, STEP_EXPORT,   STEP_EXPORT_BEFORE_PARAM, seq)); seq++;
+            dbUtil.executeQuery(String.format(QRY_INSERT_TC_STEP_FMT, tb.tcId, STEP_RUN_SCHED,STEP_RUN_SCHED_PARAM, seq)); seq++;
+            dbUtil.executeQuery(String.format(QRY_INSERT_TC_STEP_FMT, tb.tcId, STEP_DELAY,    STEP_DELAY_PARAM,  seq)); seq++;
+            dbUtil.executeQuery(String.format(QRY_INSERT_TC_STEP_FMT, tb.tcId, STEP_VALIDATE, validationParam,   seq)); seq++;
+            dbUtil.executeQuery(String.format(QRY_INSERT_TC_STEP_FMT, tb.tcId, STEP_EXPORT,   STEP_EXPORT_AFTER_PARAM,  seq));
 
             System.out.println("✅ ["+caseNo+"] "+tb.tcId+" → "+artifact);
         }
         System.out.println("Done. Artifacts at: " + ARTIFACT_ROOT);
     }
 
-    // ===== parsing & helpers (same as before) =====
+    // ===== parsing & helpers =====
     private TestBlock parseBlock(List<String> block) {
         TestBlock tb = new TestBlock();
         for (String raw : block) {
             String line = raw.trim();
             if (line.isEmpty() || line.startsWith("--")) continue;
 
-            if (line.startsWith("TD-"))       tb.tcDesc   = line.substring(3).trim();
-            else if (line.startsWith("DBTYPE-")) tb.dbTypeBiz = line.substring(7).trim();
-            else if (line.startsWith("DISC-"))   tb.disc      = line.substring(5).trim();
+            if (line.startsWith("TD-"))          tb.tcDesc     = line.substring(3).trim();
+            else if (line.startsWith("DBTYPE-")) tb.dbTypeBiz  = line.substring(7).trim();
+            else if (line.startsWith("DISC-"))   tb.disc       = line.substring(5).trim();
+            else if (line.startsWith("VALTARGET-")) {
+                if (tb.validation == null) tb.validation = new ValidationSpec();
+                tb.validation.target = line.substring("VALTARGET-".length()).trim();
+            }
             else if (line.startsWith("DIAC:"))   parseDIAC(tb, line.substring(5).trim());
             else if (line.startsWith("DIDP:"))   parseDIDP(tb, line.substring(5).trim());
             else if (line.startsWith("DIKS:"))   parseDIKS(tb, line.substring(5).trim());
+            // DIAS / DISW / DIDM / DKSS are auto-generated from current tb
         }
-        require(tb.tcDesc != null, "TD- required");
-        require(tb.dbTypeBiz != null, "DBTYPE- required");
-        require(tb.disc != null, "DISC- required");
-        require(tb.topicName != null, "DIAC: TN (topic_name) required");
+        require(tb.tcDesc != null,     "TD- required");
+        require(tb.dbTypeBiz != null,  "DBTYPE- required");
+        require(tb.disc != null,       "DISC- required");
+        require(tb.topicName != null,  "DIAC: TN (topic_name) required");
         return tb;
     }
 
     private void parseDIAC(TestBlock tb, String spec) {
         Map<String,String> kv = kv(spec);
         tb.topicName = must(kv, "TN", "DIAC requires TN");
-        Set<String> est = csvSet(kv.get("EST"));
+
+        Set<String> est = csvSet(kv.get("EST")); // SDD flags
         tb.flags.funSdd    = est.contains("FUNNEL") ? 1 : 0;
         tb.flags.aimlSdd   = est.contains("AIML")   ? 1 : 0;
         tb.flags.idwSdd    = est.contains("IDW")    ? 1 : 0;
         tb.flags.iedpsSdd  = est.contains("IEDPS")  ? 1 : 0;
         tb.flags.espialSdd = est.contains("ESPIAL") ? 1 : 0;
-        Set<String> eft = csvSet(kv.get("EFT"));
+
+        Set<String> eft = csvSet(kv.get("EFT")); // FFT flags
         tb.flags.funFft    = eft.contains("FUNNEL") ? 1 : 0;
         tb.flags.idwFft    = eft.contains("IDW")    ? 1 : 0;
         tb.flags.espialFft = eft.contains("ESPIAL") ? 1 : 0;
@@ -111,7 +112,6 @@ public class TestCaseRunner implements CommandLineRunner {
         tb.dbprop.sn  = must(kv, "SN",  "DIDP requires SN");
         tb.dbprop.uid = must(kv, "UID", "DIDP requires UID");
         tb.dbprop.pwd = must(kv, "PWD", "DIDP requires PWD");
-        // accept both JUR or JURL
         tb.dbprop.jur = kv.getOrDefault("JUR", kv.get("JURL"));
         require(tb.dbprop.jur != null, "DIDP requires JUR or JURL");
     }
@@ -141,7 +141,7 @@ public class TestCaseRunner implements CommandLineRunner {
         require(!tb.diks.tokens.isEmpty(), "DIKS must contain at least one event-status token (e.g., P-C)");
     }
 
-    // ===== Helpers (unchanged) =====
+    // ===== Helpers =====
     private long allocateSeq(String id, int startAt) {
         String sel = String.format(QRY_SELECT_SEQ_FMT, id);
         List<Map<String,Object>> rows = dbUtil.queryForList(sel);
@@ -212,7 +212,9 @@ public class TestCaseRunner implements CommandLineRunner {
     }
 
     private static String unquote(String s) {
-        if ((s.startsWith("\"") && s.endsWith("\"")) || (s.startsWith("'") && s.endsWith("'"))) return s.substring(1, s.length()-1);
+        if (s == null) return null;
+        if ((s.startsWith("\"") && s.endsWith("\"")) || (s.startsWith("'") && s.endsWith("'")))
+            return s.substring(1, s.length()-1);
         return s;
     }
 
@@ -249,6 +251,4 @@ public class TestCaseRunner implements CommandLineRunner {
             default    -> null;
         };
     }
-
-
 }
