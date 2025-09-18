@@ -1,0 +1,329 @@
+Here’s a simple, copy-pasteable guide you can hand to non-technical teammates. It explains every line type they might put in input.txt, in plain English, with examples and guardrails.
+
+
+---
+
+How to write input.txt (human-friendly rules)
+
+The big idea
+
+Each test case is a short block of lines.
+
+Blank lines separate test cases.
+
+Most lines are optional; add only what you need.
+
+We create 6 steps per test case automatically. Step-1 generates a .sql file that deletes and inserts rows for all required tables (and deletes only kafka_ait_scheduler_stat by default). Step-5 stores a validation check that returns TRUE or FALSE.
+
+
+
+---
+
+Minimal example
+
+TD-SDD Metadata start case (Oracle)
+DBTYPE-ORACLE
+DISC-SDD
+DIAC:TN-"TestTopic_A",EST-"IDW,FUNNEL,AIML,IEDPS",EFT-"FUNNEL"
+DIDP:ID-1,MN-"Machine1",DN-"Database1",SN-"Schema1",UID-"User1",PWD-"Pass1",JUR-"jdbc:oracle:thin:@//localhost:1521/ORCL"
+DIKS:P-C,MD-IP,GID-"Group-A",CID-"CFG-01"
+VALTARGET-BOTH
+VAL: P-C>=1, MD-IP=0, KDUR<=900, S-COMPLETED>=1, S-FAILED=0
+
+That’s one test case. Add a blank line and repeat for the next.
+
+
+---
+
+Lines you can use (and what they mean)
+
+1) TD-... (Test Description) — required
+
+A friendly name for the test case.
+
+We also use it as the test name in the database.
+
+Example:
+TD-SDD Metadata start case (Oracle)
+
+
+2) DBTYPE-... (Business DB type) — required
+
+What kind of source system your test refers to (not SQL dialect).
+
+Examples: DBTYPE-ORACLE, DBTYPE-HIVE, DBTYPE-MONGODB, DBTYPE-TERADATA.
+
+
+3) DISC-... (Discovery type) — required
+
+Usually SDD or UDD.
+
+Affects the AIT prefix used in Kafka rows (e.g., SDD_AIT_12345).
+
+Example: DISC-SDD
+
+
+
+---
+
+4) DIAC:... (AIT Config) — usually needed
+
+Sets flags and the topic name used by the system.
+
+TN = Topic name (must be provided): TN-"TestTopic_A"
+
+EST = List of SDD tools to enable: EST-"IDW,FUNNEL,AIML,IEDPS,ESPIAL"
+
+EFT = List of FFT tools to enable: EFT-"FUNNEL,IDW,ESPIAL"
+
+
+If you don’t list a tool in EST/EFT, that tool’s flag is set to 0 (off).
+
+Example:
+
+DIAC:TN-"TestTopic_A",EST-"IDW,FUNNEL,AIML",EFT-"FUNNEL"
+
+
+---
+
+5) DIDP:... (AIT DB Properties) — usually needed
+
+Connection-ish details for the test AIT.
+
+Short keys (put quotes around names/passwords/URLs):
+
+Key	Meaning	Example
+
+ID	ID (freeform)	ID-1
+MN	Machine name	MN-"Machine1"
+DN	Database name	DN-"Database1"
+SN	Schema name	SN-"Schema1"
+UID	User id	UID-"User1"
+PWD	Password	PWD-"Pass1"
+JUR	JDBC URL	JUR-"jdbc:oracle:thin:@//host/ORCL"
+
+
+> You can also write JURL- instead of JUR-. We accept either.
+
+
+
+Example:
+
+DIDP:ID-1,MN-"Machine1",DN-"Database1",SN-"Schema1",UID-"User1",PWD-"Pass1",JUR-"jdbc:oracle:thin:@//localhost:1521/ORCL"
+
+
+---
+
+6) DIKS:... (Kafka events to insert) — optional but common
+
+Describes the Kafka events and statuses to insert for this test.
+
+Time hints (optional):
+
+ST-YYYY-MM-DD HH:MM:SS → start time
+
+CTM-N (add N minutes), CTH-N (add N hours), CTD-N (add N days), CTMO-N (add N months) to compute the end time.
+If you omit ST-, we use “now”.
+
+
+Group/config IDs (optional):
+
+GID-"Group-A"
+
+CID-"CFG-01"
+
+
+Event-Status tokens (comma-separated):
+
+Events: P (Producer), MD (Metadata), FC (Consumer), IDC (IDW-Consumer), AIC (AIML-Consumer), IEC (IEDPS-Consumer), EC (Espial-Consumer)
+
+Status: C (Completed), F (Failed), PP (Partially Processed), IP (In Progress), CNS (Completed-NS), TE (Terminated)
+
+Write as EVENT-STATUS, e.g. P-C, MD-IP, FC-F.
+
+
+
+Example:
+
+DIKS:ST-2025-09-16 09:00:00,CTM-10,P-C,MD-IP,GID-"Group-A",CID-"CFG-01"
+
+> We automatically delete previous Kafka rows for this AIT before inserting the new ones.
+
+
+
+
+---
+
+7) DIAS: (AIT Sequence) — optional shorthand
+
+No arguments.
+
+Means: maintain one sequence number (SEQ_NO) for the whole test AIT (we insert row(s) in ait_seq with SEQ_NO=1 by default unless you’ve pre-seeded it).
+
+You can include it as a blank rule: DIAS:
+
+If you omit it, the framework can still run (your defaults may apply).
+
+
+8) DISW: (Scan window 7×24) — optional shorthand
+
+No arguments.
+
+Means: remove any existing scan windows for this AIT and insert 7 rows (Mon..Sun, 00:00–23:59) into ait_scan_window.
+
+Just write DISW: on its own line to include it.
+
+
+9) DIDM: (Disposition metrics) — optional shorthand
+
+No arguments.
+
+Means: delete old rows and write one row to dp_ktb_mv_dispositionmetrics:
+
+AppID = AIT number
+
+DBType = from DBTYPE-…
+
+DiscoveryType = from DISC-…
+
+ProvidedBy = system
+
+ProvidedOn = max of Kafka LAST_UPDATED + 2 minutes
+
+IsActive = 1
+
+
+
+Just write DIDM: to include it.
+
+> If you skip DIAS, DISW, or DIDM, that part is simply not generated.
+
+
+
+
+---
+
+10) Default delete-only for kafka_ait_scheduler_stat
+
+You don’t need to write a rule line for this.
+
+Step-1 always deletes kafka_ait_scheduler_stat rows for this AIT (no inserts by default).
+
+
+
+---
+
+Validation (Step-5) — optional but recommended
+
+(A) VALTARGET-...
+
+Tells the validator where to look:
+
+VALTARGET-BOTH (default) → check Kafka and Scheduler rules together (AND logic).
+
+VALTARGET-KAFKA_ONLY → only the Kafka rules apply.
+
+VALTARGET-SCHED_ONLY → only the Scheduler rules apply.
+
+
+(B) VAL: ... (one line with your checks)
+
+A comma-separated list of checks that must pass.
+If you skip VAL:, we use a default TRUE condition (test passes) so your run won’t fail.
+
+Kafka checks (for kafka_stat):
+
+P-C>=1 → at least 1 Producer with Completed
+
+MD-IP=0 → no Metadata rows In Progress
+
+AIC-F=0 → no AIML-Consumer Failed
+
+KDUR<=600 → maximum Kafka duration (seconds) ≤ 600
+
+
+Scheduler checks (for kafka_ait_scheduler_stat):
+
+S-COMPLETED>=1 → at least 1 COMPLETED
+
+S-FAILED=0 → no FAILED
+
+
+Operators: =, >=, <= (always compare to a whole number).
+
+Example:
+
+VALTARGET-BOTH
+VAL: P-C>=1, MD-IP=0, KDUR<=900, S-COMPLETED>=1, S-FAILED=0
+
+> The framework builds a single SQL expression from these rules and stores it as the Step-5 parameter. Your executor then runs it and gets TRUE or FALSE.
+
+
+
+
+---
+
+Formatting tips (common gotchas)
+
+Strings with spaces: wrap in quotes → "Some Value".
+Examples: TN-"My Topic", MN-"Machine A"
+
+Commas: separate settings with commas, but don’t add a trailing comma.
+
+Time format: YYYY-MM-DD HH:MM:SS (24-hour). Example: ST-2025-09-16 09:00:00.
+
+Case doesn’t matter for keywords (MD, AIC, VALTARGET-...); we normalize internally.
+
+Blank line between test cases.
+
+You can add comment lines that start with -- (they’re ignored).
+
+
+
+---
+
+A fuller multi-case example
+
+TD-SDD Metadata start case (Oracle)
+DBTYPE-ORACLE
+DISC-SDD
+VALTARGET-BOTH
+VAL: P-C>=1, MD-IP=0, KDUR<=900, S-COMPLETED>=1, S-FAILED=0
+DIAC:TN-"TestTopic_A",EST-"IDW,FUNNEL,AIML,IEDPS",EFT-"FUNNEL"
+DIDP:ID-1,MN-"Machine1",DN-"Database1",SN-"Schema1",UID-"User1",PWD-"Pass1",JUR-"jdbc:oracle:thin:@//localhost:1521/ORCL"
+DIKS:ST-2025-09-16 09:00:00,CTM-10,P-C,MD-IP,GID-"Group-A",CID-"CFG-01"
+DIAS:
+DISW:
+DIDM:
+
+TD-UDD smoke test (Hive)
+DBTYPE-HIVE
+DISC-UDD
+VALTARGET-KAFKA_ONLY
+VAL: P-PP>=1, EC-C>=1, KDUR<=300, AIC-F=0
+DIAC:TN-"HiveTopic",EST-"IDW"
+DIDP:ID-2,MN-"HiveNode01",DN-"HiveDB",SN-"HiveSchema",UID-"huser",PWD-"hpass",JURL-"jdbc:hive2://hivehost:10000/default"
+DIKS:CTD-1,P-PP,EC-C,GID-"Group-B",CID-"CFG-02"
+DIAS:
+DISW:
+DIDM:
+
+
+---
+
+What the framework does for you (behind the scenes)
+
+IDs: Creates unique TC_ID and AIT_NO automatically.
+
+Step-1 file: Generates a .sql file that:
+
+DELETEs + INSERTs rows for: ait_config, ait_dbprop, kafka_stat, ait_seq (if DIAS:), ait_scan_window (if DISW:), dp_ktb_mv_dispositionmetrics (if DIDM:).
+
+DELETE only for kafka_ait_scheduler_stat (always).
+
+
+Step-5 parameter: Saves a single validation expression (built from VALTARGET and VAL) that returns TRUE/FALSE when executed.
+
+
+If your users follow this guide, they can write test cases safely without SQL or JSON knowledge.
+
